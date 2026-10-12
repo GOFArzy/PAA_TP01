@@ -1,0 +1,5 @@
+# Artefatos de compilacao
+bin/
+obj/
+*.o
+*.exe
