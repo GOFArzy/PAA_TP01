@@ -1,3 +1,6 @@
+#define _XOPEN_SOURCE 500
+#define _DEFAULT_SOURCE
+
 #include "visualizador.h"
 #include <stdio.h>
 #include <unistd.h>

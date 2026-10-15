@@ -3,3 +3,6 @@ bin/
 obj/
 *.o
 *.exe
+*.out
+a.out
+EOF
