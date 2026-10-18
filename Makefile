@@ -8,6 +8,15 @@ INC_DIR = include
 OBJ_DIR = obj
 BIN_DIR = bin
 
+# Compatibilidade de comandos entre Windows e Linux
+ifeq ($(OS),Windows_NT)
+    MKDIR = if not exist $(OBJ_DIR) mkdir $(OBJ_DIR) & if not exist $(BIN_DIR) mkdir $(BIN_DIR)
+    RMDIR = if exist $(OBJ_DIR) rmdir /s /q $(OBJ_DIR) & if exist $(BIN_DIR) rmdir /s /q $(BIN_DIR)
+else
+    MKDIR = mkdir -p $(OBJ_DIR) $(BIN_DIR)
+    RMDIR = rm -rf $(OBJ_DIR) $(BIN_DIR)
+endif
+
 # Arquivos fonte do programa principal (labirinto)
 MAIN_SRCS = $(SRC_DIR)/main.c $(SRC_DIR)/mapa.c $(SRC_DIR)/backtracking.c \
             $(SRC_DIR)/navegacao.c $(SRC_DIR)/cli.c $(SRC_DIR)/analise.c \
@@ -33,7 +42,7 @@ all: dirs $(TARGET_MAIN) $(TARGET_GERADOR) $(TARGET_BENCHMARK)
 
 # Criar diretórios necessários
 dirs:
-	@mkdir -p $(OBJ_DIR) $(BIN_DIR)
+	@$(MKDIR)
 
 # Compilar o Labirinto Principal
 $(TARGET_MAIN): $(MAIN_OBJS)
@@ -45,7 +54,7 @@ $(TARGET_GERADOR): $(GERADOR_OBJS)
 
 # Compilar o Benchmark
 $(TARGET_BENCHMARK): $(BENCH_OBJS)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^ -lm
 
 # Regra genérica para gerar arquivos objeto (.o)
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
@@ -53,6 +62,6 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 
 # Limpeza dos arquivos compilados
 clean:
-	rm -rf $(OBJ_DIR) $(BIN_DIR)
+	@$(RMDIR)
 
 .PHONY: all dirs clean
