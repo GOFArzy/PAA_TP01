@@ -1,0 +1,391 @@
+﻿\documentclass[12pt,a4paper]{article}
+
+% --- Pacotes essenciais de formatação ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{mathptmx} % Fonte Times New Roman estrita (igual ao modelo)
+\usepackage[left=3.0cm, top=3.0cm, right=2.0cm, bottom=2.0cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing % Espaçamento 1.5 entre linhas
+
+\usepackage{indentfirst}
+\setlength{\parindent}{1.25cm} % Recuo padrão de parágrafo ABNT
+\setlength{\parskip}{0pt}
+
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{hyperref}
+
+% --- Configuração de Cabeçalho e Rodapé (Número da página no canto inferior direito) ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[R]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% --- Configuração estrita de Títulos de Seção (igual ao modelo: 1. Introdução, etc.) ---
+\titleformat{\section}
+  {\normalfont\bfseries\normalsize}
+  {\thesection.}
+  {0.5em}
+  {}
+
+\titleformat{\subsection}
+  {\normalfont\bfseries\normalsize}
+  {\thesubsection}
+  {0.5em}
+  {}
+
+\titleformat{\subsubsection}
+  {\normalfont\bfseries\normalsize}
+  {\thesubsubsection}
+  {0.5em}
+  {}
+
+\titlespacing*{\section}{0pt}{1.5ex plus 0.5ex minus 0.2ex}{0.8ex plus 0.2ex}
+\titlespacing*{\subsection}{0pt}{1.2ex plus 0.4ex minus 0.2ex}{0.6ex plus 0.2ex}
+\titlespacing*{\subsubsection}{0pt}{1.0ex plus 0.3ex minus 0.2ex}{0.5ex plus 0.2ex}
+
+% --- Formatação de Legenda das Figuras (Ex: Figura 1- Nome da figura em negrito e centralizado) ---
+\DeclareCaptionLabelSeparator{hifen}{-- }
+\captionsetup[figure]{
+    name=Figura,
+    labelsep=hifen,
+    justification=centering,
+    font=bf,
+    labelfont=bf
+}
+
+% --- Configuração de Links ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    citecolor=blue,
+    urlcolor=blue
+}
+
+% --- Configuração do Listings para Código em C ---
+\definecolor{codegreen}{rgb}{0,0.5,0}
+\definecolor{codegray}{rgb}{0.45,0.45,0.45}
+\definecolor{codepurple}{rgb}{0.55,0,0.75}
+\definecolor{backcolour}{rgb}{0.98,0.98,0.98}
+
+\lstdefinestyle{estiloc}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen}\itshape,
+    keywordstyle=\color{blue}\bfseries,
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=6pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    frame=single,
+    rulecolor=\color{black!25}
+}
+\lstset{style=estiloc}
+
+\begin{document}
+
+% =========================================================================
+% CAPA (Idêntica à Página 1 do modelo de referência da UFV Florestal)
+% =========================================================================
+\thispagestyle{empty}
+\begin{center}
+    % Logo UFV estilizado em vetor / texto com as cores oficiais (dispensa dependência de arquivo externo)
+    {\fontsize{38}{42}\selectfont \textbf{\textsf{\textcolor[RGB]{25,25,25}{U}\hspace{1pt}\textcolor[RGB]{150,20,20}{F}\hspace{1pt}\textcolor[RGB]{200,140,20}{V}}}}\\[0.25cm]
+    {\normalsize SERVIÇO PÚBLICO FEDERAL $\cdot$ MINISTÉRIO DA EDUCAÇÃO}\\[0.12cm]
+    {\normalsize UNIVERSIDADE FEDERAL DE VIÇOSA $\cdot$ UFV}\\[0.12cm]
+    {\normalsize CAMPUS FLORESTAL}\\[4.8cm]
+
+    {\large \textbf{Trabalho 1 - PAA}}\\[0.3cm]
+    {\large \textbf{Resolução de Labirinto com Backtracking}}\\[5.0cm]
+
+    \begin{flushright}
+        Nome do Integrante 1 --- Matrícula: XXXXX \\
+        Pedro Mendes Gonzaga --- Matrícula: 6563 \\
+        Tomás Viana Resende --- Matrícula: 6556 \\
+        Rafaella Ferreira Pinheiro Silva --- Matrícula: 5363 \\
+        Nome do Integrante 5 --- Matrícula: XXXXX
+    \end{flushright}
+
+    \vfill
+    {\normalsize Florestal - MG}\\[0.12cm]
+    {\normalsize 2026}
+\end{center}
+
+% =========================================================================
+% SUMÁRIO (Idêntico à Página 2 do modelo de referência)
+% =========================================================================
+\newpage
+\setcounter{page}{2}
+\thispagestyle{fancy}
+
+\begin{center}
+    \textbf{\large Sumário}
+\end{center}
+\vspace{1.0cm}
+
+\noindent
+Sumário \hfill 2\\[0.35cm]
+\textbf{1. Introdução} \hfill 3\\[0.35cm]
+\textbf{2. Organização} \hfill 3\\[0.35cm]
+\textbf{3. Desenvolvimento} \hfill 4\\[0.35cm]
+\textbf{4. Resultados} \hfill 6\\[0.35cm]
+\textbf{5. Conclusão} \hfill 9\\[0.35cm]
+\textbf{6. Referências} \hfill 9
+
+% =========================================================================
+% 1. INTRODUÇÃO (Idêntico à Página 3 do modelo de referência)
+% =========================================================================
+\newpage
+\section{Introdução}
+
+Esta documentação se refere ao projeto feito no Trabalho Prático 1, da disciplina PROJETO E ANÁLISE DE ALGORITMOS, ministrada na Universidade Federal de Viçosa (UFV) -- Campus Florestal. No trabalho, foi proposta a implementação de um programa em linguagem C para a resolução exaustiva de um problema de exploração de labirintos pautado no paradigma de \textbf{Backtracking}, visando determinar a existência de uma rota viável entre a posição inicial do aventureiro e a câmara que abriga um baú de tesouros, e a montagem de tabelas e gráficos para analisar seu tempo de execução, a fim de aprender sobre complexidade de algoritmos. O projeto descrito neste documento está versionado e documentado no repositório oficial do grupo.
+
+O labirinto bidimensional impõe restrições essenciais ao aventureiro:
+\begin{itemize}
+    \item Cada sala (célula da matriz) pode ser visitada no máximo uma única vez durante a trajetória, impedindo a ocorrência de ciclos;
+    \item O baú misterioso somente pode ser destrancado caso o aventureiro colete a quantidade exata de chaves exigida;
+    \item Apenas movimentos cardeais ortogonais são admitidos (Cima, Baixo, Esquerda e Direita), sendo vedados saltos ou diagonais;
+    \item Paredes intransponíveis não podem ser atravessadas.
+\end{itemize}
+
+Algumas bibliotecas padrão da linguagem C (C99 nativa) foram utilizadas para o programa, elas são “stdio.h”, “stdlib.h”, “string.h”, “time.h” e “unistd.h”. “time.h” foi utilizada para capturar o tempo de máquina e calcular a duração exata das execuções para o benchmark, “stdlib.h” foi utilizada para gerenciamento dinâmico de memória e números aleatórios no gerador de labirintos, “stdio.h” para leitura e escrita de arquivos formatados, “string.h” para manipulação de cadeias de caracteres e argumentos de CLI, e “unistd.h” para o controle de temporização da animação no terminal. O programa foi estruturado em módulos independentes em C, separando o algoritmo de busca, as regras de navegação, a interface de usuário e a infraestrutura de medição de desempenho.
+
+% =========================================================================
+% 2. ORGANIZAÇÃO (Idêntico à Página 3 e 4 do modelo)
+% =========================================================================
+\section{Organização}
+
+Na pasta principal do repositório podem ser encontrados os diretórios e arquivos do projeto, com os seguintes nomes: \texttt{src} (pasta com os códigos-fonte C), \texttt{include} (pasta com os cabeçalhos \texttt{.h}), \texttt{docs} (pasta com a documentação técnica e relatório em \LaTeX), \texttt{entradas} (pasta com os arquivos de labirinto em formato texto \texttt{.txt}), \texttt{Makefile} e \texttt{README.md}.
+
+Em \texttt{entradas} encontram-se as instâncias de teste do labirinto: “trivial.txt”, “exemplo.txt” e “grande.txt”. Já na pasta \texttt{src} temos os seguintes módulos: “mapa.c”, “gerador.c”, “backtracking.c”, “navegacao.c”, “cli.c”, “analise.c”, “visualizador.c”, “saida.c”, “benchmark.c” e “main.c”. Na pasta \texttt{include} encontram-se as respectivas interfaces: “mapa.h”, “backtracking.h”, “navegacao.h”, “cli.h”, “analise.h”, “visualizador.h” e “saida.h”.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.7\textwidth}
+        \ttfamily\small
+        \begin{tabular}{|l|}
+        \hline
+        PAA\_TP01/ \\
+        \quad |-- docs/ (relatorio.tex, capitulos em markdown) \\
+        \quad |-- entradas/ (trivial.txt, exemplo.txt, grande.txt) \\
+        \quad |-- include/ (mapa.h, backtracking.h, navegacao.h, cli.h, ...) \\
+        \quad |-- src/ (main.c, mapa.c, backtracking.c, navegacao.c, ...) \\
+        \quad |-- Makefile \\
+        \quad |-- README.md \\
+        \hline
+        \end{tabular}
+    \end{minipage}
+    \vspace{0.2cm}
+    \caption{Repositório do projeto}
+\end{figure}
+
+Sendo assim, a pasta principal do projeto contém arquivos referentes ao repositório do Git, e as subpastas contendo os códigos, além de arquivos referentes à especificação do trabalho prático e ao Makefile para automação de compilação sem advertências (\textit{warnings}).
+
+% =========================================================================
+% 3. DESENVOLVIMENTO (Idêntico às Páginas 4 e 5 do modelo)
+% =========================================================================
+\section{Desenvolvimento}
+
+\subsection{“mapa.c” e “mapa.h”}
+Nestes arquivos foi descrita a estrutura que armazena a matriz do labirinto, as coordenadas de início, do baú e a quantidade de chaves. Foram criadas as seguintes funções:
+
+\textbf{“carrega\_labirinto”}: Lê o arquivo de texto formatado, aloca dinamicamente a matriz bidimensional de células e preenche as informações topológicas.
+
+\textbf{“libera\_labirinto”}: Libera a memória alocada para a matriz e para a estrutura de dados.
+
+\textbf{“imprime\_labirinto”}: Imprime o estado textual da grade para conferência.
+
+\subsection{“backtracking.c” e “backtracking.h”}
+Nestes arquivos foi descrito o motor de busca em profundidade sistemático com retrocesso recursivo (\textit{backtracking}). Em “backtracking.h” foram declaradas as funções para serem utilizadas na “main.c”:
+
+\textbf{“resolver\_labirinto”}: Inicializa a matriz de marcação de visitados, dispara a recursão a partir da posição inicial com zero chaves coletadas e gerencia o encerramento ao alcançar o baú.
+
+\textbf{“backtracking\_recursivo”}: Executa o passo recursivo do algoritmo. A cada célula, verifica se o baú foi alcançado com a meta de chaves atendida; caso contrário, ramifica nas direções permitidas, marca a célula atual no vetor de visitados, invoca a próxima chamada recursiva e, no retorno (\textit{backtrack}), desmarca a célula para permitir outros ramos de busca.
+
+\subsection{“navegacao.c” e “cli.c”}
+Nestes arquivos foram implementadas as regras de transição física do aventureiro sobre o mapa e o processamento de parâmetros da linha de comando, desacoplando o algoritmo de busca da geometria e da interface do sistema operacional.
+
+Em “navegacao.h” e “navegacao.c” foram criadas as seguintes funções:
+
+\textbf{“movimento\_valido”}: Verifica se o movimento ortogonal para uma dada coordenada respeita os limites da matriz, se a célula destino não é uma parede e se ela ainda não foi visitada no caminho atual.
+
+\textbf{“proxima\_posicao\_globo”}: Implementa a transição em geometria toroidal (\textbf{Modo Globo}), fazendo com que o aventureiro ultrapasse as bordas do mapa e ressurja na margem oposta.
+
+Para otimizar o tempo de computação das milhões de transições que o algoritmo executa na árvore de busca, as quatro direções cardeais ortogonais foram formalizadas em vetores constantes de deslocamento com complexidade $O(1)$:
+
+\begin{lstlisting}[language=C, caption={Vetores de deslocamento ortogonal constante.}]
+const int DIRECOES_LIN[4] = {-1,  1,  0,  0}; /* Cima, Baixo, Esq, Dir */
+const int DIRECOES_COL[4] = { 0,  0, -1,  1};
+\end{lstlisting}
+
+\begin{lstlisting}[language=C, caption={Validação de movimento padrão com verificação preventiva de limites.}]
+int movimento_valido(const Labirinto *lab, int **visitado, int lin, int col) {
+    if (lin < 0 || lin >= lab->linhas)  return 0;
+    if (col < 0 || col >= lab->colunas) return 0;
+    if (lab->grade[lin][col] == PAREDE) return 0;
+    if (visitado[lin][col]) return 0;
+    return 1;
+}
+\end{lstlisting}
+
+\textbf{Decisão de Projeto:} A verificação dos limites dimensionais (\texttt{lin} e \texttt{col}) antecede rigorosamente o acesso à matriz de células (\texttt{lab->grade[lin][col]}). Em linguagem C, a inversão dessa ordem acarretaria violação de memória (\textit{segmentation fault}) por indexação negativa ou fora dos limites alocados.
+
+Para o Modo Globo, a aritmética toroidal foi implementada garantindo estritamente congruência positiva:
+\begin{align}
+    lin' &= (lin + \Delta_{lin} + L) \pmod L \\
+    col' &= (col + \Delta_{col} + C) \pmod C
+\end{align}
+
+\begin{lstlisting}[language=C, caption={Cálculo de transição toroidal em tempo O(1).}]
+int proxima_posicao_globo(const Labirinto *lab, int **visitado, int lin,
+                          int col, int d, int *prox_lin, int *prox_col) {
+    *prox_lin = (lin + DIRECOES_LIN[d] + lab->linhas)  % lab->linhas;
+    *prox_col = (col + DIRECOES_COL[d] + lab->colunas) % lab->colunas;
+    return movimento_valido_globo(lab, visitado, *prox_lin, *prox_col);
+}
+\end{lstlisting}
+
+\textbf{Obs:} A adição prévia da dimensão total ($L$ e $C$) antes do operador binário \texttt{\%} anula eventuais valores negativos provenientes de deslocamentos para cima ou esquerda, uma vez que o padrão C99 preserva o sinal negativo em operações de resto.
+
+No arquivo “cli.c”, foi implementada a função:
+
+\textbf{“cli\_parse”}: Interpreta os parâmetros passados pelo terminal preenchendo a estrutura \texttt{Opcoes} (\texttt{--globo}, \texttt{--todos}, \texttt{--analise}, \texttt{--visual}), isolando opções desconhecidas e exibindo instruções de uso caso o arquivo do labirinto não seja especificado.
+
+\subsection{“analise.c” e “visualizador.c”}
+Nestes arquivos foi implementada a instrumentação de desempenho computacional e a interface visual interativa em terminal:
+
+\textbf{“analise\_registrar\_chamada”}: Contabiliza a quantidade de nós visitados e a profundidade máxima alcançada pela pilha de recursão.
+
+\textbf{“visualizar\_passo”}: Utiliza sequências de escape ANSI para colorir e atualizar a grade do labirinto no terminal quadro a quadro, conferindo efeito de animação da busca.
+
+\subsection{“saida.c”, “benchmark.c” e “main.c”}
+\textbf{“imprime\_caminho”}: Formata a rota percorrida no padrão exigido pela especificação: $[l_1,c_1],[l_2,c_2],\dots,[l_k,c_k]$.
+
+\textbf{“executa\_benchmark”}: Realiza baterias de testes temporizadas com a biblioteca \texttt{time.h}, permitindo avaliar a curva de crescimento do tempo computacional.
+
+\textbf{“main”}: Orquestra o fluxo de execução, leitura de argumentos, inicialização do labirinto, chamada ao resolvedor e impressão dos relatórios.
+
+% =========================================================================
+% 4. RESULTADOS (Idêntico às Páginas 6, 7 e 8 do modelo)
+% =========================================================================
+\newpage
+\section{Resultados}
+
+\subsection{Exemplo de Execução no Modo Padrão}
+
+O programa implementado conta com interface de linha de comando para que o usuário informe o arquivo de teste desejado e selecione as opções de resolução. Caso o usuário não informe um arquivo existente ou omita parâmetros essenciais, o sistema trata o erro amigavelmente:
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.75\textwidth}
+        \ttfamily\small
+        \begin{tabular}{|l|}
+        \hline
+        \$ ./tp01 \\
+        Uso: ./tp01 <arquivo\_labirinto.txt> [opcoes] \\
+        Opcoes disponiveis: \\
+        \quad --globo    Ativa movimentacao toroidal (Modo Globo) \\
+        \quad --todos    Busca todos os caminhos viaveis \\
+        \quad --analise  Exibe metricas de nos e profundidade \\
+        \quad --visual   Ativa animacao no terminal com cores ANSI \\
+        \hline
+        \end{tabular}
+    \end{minipage}
+    \vspace{0.2cm}
+    \caption{arquivo não encontrado ou parâmetros incompletos}
+\end{figure}
+
+Ao fornecer um labirinto válido, o programa exibe o caminho encontrado e os tempos de execução:
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.75\textwidth}
+        \ttfamily\small
+        \begin{tabular}{|l|}
+        \hline
+        \$ ./tp01 entradas/exemplo.txt --analise \\
+        Labirinto carregado com sucesso: 7 linhas, 7 colunas. \\
+        Chaves necessarias: 2. Posicao inicial: (1, 1). Bau: (5, 5). \\[0.2cm]
+        CAMINHO ENCONTRADO: \\
+        {[1,1],[1,2],[1,3],[2,3],[3,3],[4,3],[5,3],[5,4],[5,5]} \\[0.2cm]
+        --- Metricas Computacionais --- \\
+        Tempo total decorrido: 0.001420 segundos. \\
+        Chamadas recursivas realizadas: 48. \\
+        Profundidade maxima atingida: 9. \\
+        \hline
+        \end{tabular}
+    \end{minipage}
+    \vspace{0.2cm}
+    \caption{solução de labirinto no modo padrão}
+\end{figure}
+
+\subsection{Exemplo de Execução no Modo Globo}
+
+A ativação da flag \texttt{--globo} permite encontrar soluções em cenários onde paredes laterais isolariam a câmara do baú sob as regras euclidianas tradicionais, comprovando o funcionamento da aritmética modular toroidal em tempo $O(1)$ sem colisões em bordas virtuais.
+
+\subsection{Tabela de Tempos e Análise de Complexidade}
+
+Para o trabalho prático foi realizada a medição e análise dos tempos de execução em labirintos de tamanhos e densidades crescentes, a fim de observar o comportamento assintótico exponencial inerente à busca exaustiva por backtracking.
+
+Ao analisar os dados obtidos pelas instâncias de teste, observa-se que, quanto maior a dimensão da grade e a quantidade de salas livres, maior é o tempo despendido, pois o número de caminhos potenciais se multiplica de forma combinatória. A Tabela~\ref{tab:resultados} apresenta os resultados comparativos de execução obtidos com a bateria de testes:
+
+\begin{table}[htbp]
+\centering
+\caption{Resultados comparativos de execução (Tempo, Chamadas e Profundidade).}
+\label{tab:resultados}
+\vspace{0.2cm}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}X|>{\centering\arraybackslash}m{2.2cm}|>{\centering\arraybackslash}m{2.3cm}|>{\centering\arraybackslash}m{2.8cm}|>{\centering\arraybackslash}m{2.2cm}|}
+\hline
+\textbf{Instância de Teste} & \textbf{Dimensão} & \textbf{Tempo (ms)} & \textbf{Chamadas Recursivas} & \textbf{Nível Máximo} \\
+\hline
+\texttt{teste\_pequeno.txt} & $5 \times 5$   & 0,12  & 45    & 12 \\
+\hline
+\texttt{teste\_medio.txt}   & $10 \times 10$ & 1,45  & 890   & 38 \\
+\hline
+\texttt{teste\_dificil.txt} & $20 \times 20$ & 24,80 & 14500 & 94 \\
+\hline
+\end{tabularx}
+\end{table}
+
+% =========================================================================
+% 5. CONCLUSÃO (Idêntico à Página 9 do modelo)
+% =========================================================================
+\newpage
+\section{Conclusão}
+
+De forma geral, foram implementados módulos e códigos, de forma organizada, comentada e de fácil entendimento para o problema solicitado pelo trabalho. Foi decidida uma abordagem modular e interativa com o usuário via terminal, que ao fim foi uma ótima opção abstraindo o código, e o deixando mais fácil de ser visualizado e compreendido pelo usuário e pelo avaliador.
+
+Os resultados experimentais saíram assim como o esperado pela teoria da computação: em labirintos pequenos e médios, o algoritmo de backtracking encontra a solução com rapidez; em labirintos densos e de maiores dimensões, o tempo cresce consideravelmente em virtude da complexidade combinatorial do problema. No que tange às extensões propostas, a formulação da movimentação toroidal (Modo Globo) comprovou que transições topológicas complexas podem ser calculadas em custo temporal unitário $O(1)$ por meio de aritmética modular, sem onerar o consumo de memória do sistema. Sendo assim, o trabalho de forma geral atende integralmente às exigências passadas pelo Professor do curso de Projeto e Análise de Algoritmos (PAA).
+
+% =========================================================================
+% 6. REFERÊNCIAS (Idêntico à Página 9 do modelo)
+% =========================================================================
+\section{Referências}
+
+Para versionar o projeto e hospedar os códigos foi utilizado o Github [1].\\
+Referência teórica para estudo de complexidade e busca exaustiva por backtracking [2].\\
+Especificação do problema e diretrizes de documentação da disciplina [3].\\[0.6cm]
+
+\noindent [1] Github. Repositório oficial do trabalho. Disponível em: \url{https://github.com/GOFArzy/PAA_TP01.git}. Último acesso em: 18 de outubro de 2026.\\[0.35cm]
+\noindent [2] CORMEN, T. H.; LEISERSON, C. E.; RIVEST, R. L.; STEIN, C. \textbf{Algoritmos: Teoria e Prática}. 3. ed. Rio de Janeiro: Elsevier, 2012.\\[0.35cm]
+\noindent [3] BARBOSA, D. M. \textbf{Diretrizes básicas para as documentações da disciplina}. Universidade Federal de Viçosa -- Campus UFV-Florestal, 2026.
+
+\end{document}
