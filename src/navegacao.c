@@ -76,16 +76,16 @@ int proxima_posicao(const Labirinto *lab, int **visitado, int lin, int col,
 
 // Modo Globo (Extra 3) - Movimento Toroidal
 
-// movimento_valido_globo()
-**Igual ao modo normal,
-    mas as coordenadas ja foram normalizadas via *aritmetica modular antes da
-    chamada(em proxima_posicao_globo)
-        .*Portanto,
-    apenas verifica parede e visitado — os limites sao sempre validos *apos o
-        wrap
-        - around.* / int movimento_valido_globo(const Labirinto *lab,
-                                                int **visitado, int lin,
-                                                int col) {
+/*
+ * movimento_valido_globo()
+ *
+ * Igual ao modo normal, mas as coordenadas ja foram normalizadas via
+ * aritmetica modular antes da chamada (em proxima_posicao_globo).
+ * Portanto, apenas verifica parede e visitado — os limites sao sempre validos
+ * apos o wrap-around.
+ */
+int movimento_valido_globo(const Labirinto *lab, int **visitado, int lin,
+                           int col) {
   /* Apos wrap-around toroidal, lin e col ja estao dentro dos limites */
   if (lab->grade[lin][col] == PAREDE)
     return 0;
