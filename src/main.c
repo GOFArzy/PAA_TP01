@@ -1,28 +1,26 @@
 #include "mapa.h"
 #include "saida.h"
+#include "cli.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
-/* TODO: Pessoas 2, 3 e 4 - incluir headers conforme forem finalizados */
+/* TODO: Pessoas 2 e 4 - incluir headers conforme forem finalizados */
 // #include "backtracking.h"
 // #include "navegacao.h"
-// #include "cli.h"
 // #include "analise.h"
 // #include "visualizador.h"
 
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        fprintf(stderr, "Uso: %s <arquivo_labirinto.txt> [flags]\n", argv[0]);
+    Opcoes opts;
+    if (!cli_parse(argc, argv, &opts)) {
         return 1;
     }
 
-    const char *arquivo_entrada = argv[1];
-
-    /* TODO: Pessoa 3 (cli.c) - processar argumentos extras (--globo, --visual) */
-    int modo_globo = 0;
-    int modo_visual = 0;
+    const char *arquivo_entrada = opts.arquivo_entrada;
+    int modo_globo = opts.modo_globo;
+    int modo_visual = opts.modo_visual;
     (void)modo_globo;
     (void)modo_visual;
 
