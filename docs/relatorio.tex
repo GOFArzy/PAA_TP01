@@ -1,4 +1,4 @@
-﻿\documentclass[12pt,a4paper]{article}
+\documentclass[12pt,a4paper]{article}
 
 % --- Pacotes essenciais de formatação ---
 \usepackage[utf8]{inputenc}
@@ -221,22 +221,38 @@ Nestes arquivos foi descrito o motor de busca em profundidade sistemático com r
 \textbf{“backtracking\_recursivo”}: Executa o passo recursivo do algoritmo. A cada célula, verifica se o baú foi alcançado com a meta de chaves atendida; caso contrário, ramifica nas direções permitidas, marca a célula atual no vetor de visitados, invoca a próxima chamada recursiva e, no retorno (\textit{backtrack}), desmarca a célula para permitir outros ramos de busca.
 
 \subsection{“navegacao.c” e “cli.c”}
-Nestes arquivos foram implementadas as regras de transição física do aventureiro sobre o mapa e o processamento de parâmetros da linha de comando, desacoplando o algoritmo de busca da geometria e da interface do sistema operacional.
 
-Em “navegacao.h” e “navegacao.c” foram criadas as seguintes funções:
+O desenvolvimento deste módulo teve como objetivo central desacoplar totalmente as regras de transição física do aventureiro sobre o labirinto e o tratamento dos argumentos de linha de comando em relação ao motor de busca por \textit{backtracking}. Essa divisão permitiu que os demais membros do grupo integrassem o algoritmo de busca recursiva, as métricas e a interface visual sem necessidade de manipular diretamente detalhes geométricos ou convenções de entrada do sistema operacional.
 
-\textbf{“movimento\_valido”}: Verifica se o movimento ortogonal para uma dada coordenada respeita os limites da matriz, se a célula destino não é uma parede e se ela ainda não foi visitada no caminho atual.
+A estrutura de dados \texttt{Opcoes} atua como o ponto de unificação das configurações do programa, armazenando o arquivo de entrada e as flags binárias ativadas pelo usuário:
 
-\textbf{“proxima\_posicao\_globo”}: Implementa a transição em geometria toroidal (\textbf{Modo Globo}), fazendo com que o aventureiro ultrapasse as bordas do mapa e ressurja na margem oposta.
-
-Para otimizar o tempo de computação das milhões de transições que o algoritmo executa na árvore de busca, as quatro direções cardeais ortogonais foram formalizadas em vetores constantes de deslocamento com complexidade $O(1)$:
-
-\begin{lstlisting}[language=C, caption={Vetores de deslocamento ortogonal constante.}]
-const int DIRECOES_LIN[4] = {-1,  1,  0,  0}; /* Cima, Baixo, Esq, Dir */
-const int DIRECOES_COL[4] = { 0,  0, -1,  1};
+\begin{lstlisting}[language=C, caption={Estrutura de dados Opcoes para parametrização via linha de comando.}]
+typedef struct {
+    const char *arquivo_entrada; /* Caminho do arquivo .txt do labirinto */
+    int modo_globo;              /* 1: movimentacao toroidal (--globo) */
+    int modo_todos;              /* 1: busca exaustiva de todos os caminhos (--todos) */
+    int modo_analise;            /* 1: exibicao de nos e profundidade (--analise) */
+    int modo_visual;             /* 1: animacao colorida ANSI no terminal (--visual) */
+} Opcoes;
 \end{lstlisting}
 
-\begin{lstlisting}[language=C, caption={Validação de movimento padrão com verificação preventiva de limites.}]
+A função \textbf{“cli\_parse”} é responsável por iterar sequencialmente sobre o vetor \texttt{argv} a partir do índice 1. Argumentos com o prefixo \texttt{--} são mapeados para suas respectivas variáveis na estrutura \texttt{Opcoes}. O primeiro argumento posicional sem prefixo é capturado como o caminho do arquivo do labirinto. Como medida de robustez, o grupo optou por tolerar opções desconhecidas emitindo um aviso amigável em \texttt{stderr} sem abortar a execução imediatamente. Caso nenhum arquivo de entrada seja fornecido, a função \textbf{“cli\_usage”} é acionada automaticamente para imprimir no console a sintaxe correta de invocação e os parâmetros aceitos, retornando código 0 para encerrar o programa de forma segura.
+
+Para a movimentação do aventureiro, foram estabelecidos dois modos operacionais: o modo euclidiano padrão e o modo toroidal (\textit{Modo Globo}). A fim de evitar encadeamentos repetitivos de estruturas condicionais (\texttt{if/else}) durante as milhões de chamadas recursivas do \textit{backtracking}, os deslocamentos cardeais foram mapeados em vetores bidimensionais estáticos de complexidade $O(1)$:
+
+\begin{lstlisting}[language=C, caption={Vetores constantes para deslocamento ortogonal (Cima, Baixo, Esquerda, Direita).}]
+const int DIRECOES_LIN[NUM_DIRECOES] = {-1,  1,  0,  0};
+const int DIRECOES_COL[NUM_DIRECOES] = { 0,  0, -1,  1};
+\end{lstlisting}
+
+A função \textbf{“movimento\_valido”} avalia se a célula candidata $(lin, col)$ atende rigorosamente às três restrições fundamentais do problema:
+\begin{enumerate}
+    \item Estar contida nos limites dimensionais da matriz ($0 \le lin < \text{linhas}$ e $0 \le col < \text{colunas}$);
+    \item Não constituir uma barreira física intransponível (\texttt{grade[lin][col] != PAREDE});
+    \item Não ter sido visitada no ramo de busca corrente (\texttt{visitado[lin][col] == 0}).
+\end{enumerate}
+
+\begin{lstlisting}[language=C, caption={Validação de coordenadas no modo padrão com avaliação em curto-circuito.}]
 int movimento_valido(const Labirinto *lab, int **visitado, int lin, int col) {
     if (lin < 0 || lin >= lab->linhas)  return 0;
     if (col < 0 || col >= lab->colunas) return 0;
@@ -246,28 +262,32 @@ int movimento_valido(const Labirinto *lab, int **visitado, int lin, int col) {
 }
 \end{lstlisting}
 
-\textbf{Decisão de Projeto:} A verificação dos limites dimensionais (\texttt{lin} e \texttt{col}) antecede rigorosamente o acesso à matriz de células (\texttt{lab->grade[lin][col]}). Em linguagem C, a inversão dessa ordem acarretaria violação de memória (\textit{segmentation fault}) por indexação negativa ou fora dos limites alocados.
+\textbf{Decisão de Implementação:} A checagem dos limites precede estritamente o acesso à matriz de células. Pelo mecanismo de curto-circuito das expressões lógicas em C (\textit{short-circuit evaluation}), caso os índices sejam negativos ou ultrapassem as dimensões alocadas, a função encerra imediatamente retornando 0 antes de desreferenciar a memória, prevenindo falhas de segmentação (\textit{segmentation fault}) e comportamentos indefinidos.
 
-Para o Modo Globo, a aritmética toroidal foi implementada garantindo estritamente congruência positiva:
+A função \textbf{“proxima\_posicao”} calcula a nova posição somando o vetor de deslocamento e delega sua viabilidade diretamente a \textbf{“movimento\_valido”}.
+
+Para o \textbf{Modo Globo}, o mapa deixa de ter bordas bloqueantes e passa a se comportar como uma superfície toroidal contínua, onde transpor a borda leste faz o personagem reaparecer na margem oeste, e transpor a borda sul o faz ressurgir na borda norte. A transição foi modelada matematicamente pela congruência modular:
 \begin{align}
     lin' &= (lin + \Delta_{lin} + L) \pmod L \\
     col' &= (col + \Delta_{col} + C) \pmod C
 \end{align}
 
-\begin{lstlisting}[language=C, caption={Cálculo de transição toroidal em tempo O(1).}]
+\begin{lstlisting}[language=C, caption={Cálculo toroidal em O(1) e validação de células no Modo Globo.}]
 int proxima_posicao_globo(const Labirinto *lab, int **visitado, int lin,
                           int col, int d, int *prox_lin, int *prox_col) {
     *prox_lin = (lin + DIRECOES_LIN[d] + lab->linhas)  % lab->linhas;
     *prox_col = (col + DIRECOES_COL[d] + lab->colunas) % lab->colunas;
     return movimento_valido_globo(lab, visitado, *prox_lin, *prox_col);
 }
+
+int movimento_valido_globo(const Labirinto *lab, int **visitado, int lin, int col) {
+    if (lab->grade[lin][col] == PAREDE) return 0;
+    if (visitado[lin][col]) return 0;
+    return 1;
+}
 \end{lstlisting}
 
-\textbf{Obs:} A adição prévia da dimensão total ($L$ e $C$) antes do operador binário \texttt{\%} anula eventuais valores negativos provenientes de deslocamentos para cima ou esquerda, uma vez que o padrão C99 preserva o sinal negativo em operações de resto.
-
-No arquivo “cli.c”, foi implementada a função:
-
-\textbf{“cli\_parse”}: Interpreta os parâmetros passados pelo terminal preenchendo a estrutura \texttt{Opcoes} (\texttt{--globo}, \texttt{--todos}, \texttt{--analise}, \texttt{--visual}), isolando opções desconhecidas e exibindo instruções de uso caso o arquivo do labirinto não seja especificado.
+\textbf{Fundamentação Algébrica:} No padrão C99 (ISO/IEC 9899 §6.5.5), o operador binário \texttt{\%} opera com truncamento em direção a zero, preservando o sinal algébrico negativo caso o dividendo seja negativo (por exemplo, \texttt{-1 \% 10 == -1}). A adição da dimensão total ($L$ e $C$) antes da aplicação do resto garante um valor estritamente não-negativo sem alterar a classe de congruência. Uma vez normalizadas as coordenadas no intervalo $[0, L-1]$ e $[0, C-1]$, a função \textbf{“movimento\_valido\_globo”} dispensa o teste de fronteiras externas, limitando-se a checar paredes e células já visitadas.
 
 \subsection{“analise.c” e “visualizador.c”}
 Nestes arquivos foi implementada a instrumentação de desempenho computacional e a interface visual interativa em terminal:
