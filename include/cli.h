@@ -1,39 +1,19 @@
 #ifndef CLI_H
 #define CLI_H
 
-/*
- * Estrutura que agrupa todas as opcoes de linha de comando aceitas pelo
- * programa.
- *
- * Campos:
- *   arquivo_entrada  - caminho para o arquivo .txt do labirinto (obrigatorio).
- *   modo_globo       - 1 se globo foi passado (movimento toroidal).
- *   modo_todos       - 1 se todos foi passado (encontrar todos os caminhos).
- *   modo_analise     - 1 se analise foi passado (exibir metricas de recursao).
- *   modo_visual      - 1 se visual foi passado (visualizador ANSI no terminal).
- */
+/* Estrutura que agrupa as configuracoes de execucao passadas via linha de comando */
 typedef struct {
-  const char *arquivo_entrada;
-  int modo_globo;
-  int modo_todos;
-  int modo_analise;
-  int modo_visual;
+  const char *arquivo_entrada; /* Caminho do arquivo .txt do labirinto (obrigatorio) */
+  int modo_globo;              /* 1: movimentacao toroidal (--globo) */
+  int modo_todos;              /* 1: busca exaustiva de todos os caminhos (--todos) */
+  int modo_analise;            /* 1: exibicao de nos e profundidade (--analise) */
+  int modo_visual;             /* 1: animacao colorida ANSI no terminal (--visual) */
 } Opcoes;
 
-/*
- * Faz o parse dos argumentos de linha de comando em argv e preenche *opts.
- *
- * Retorna 1 em caso de sucesso.
- * Retorna 0 se os argumentos forem invalidos (ex: nenhum arquivo informado),
- * imprimindo a mensagem de uso correta em stderr.
- *
- * Uso esperado:
- *   ./tp01 <arquivo_labirinto.txt> [globo] [todos] [analise] [visual]
- */
+/* Faz o parsing dos argumentos de linha de comando preenchendo opts (1=sucesso, 0=erro) */
 int cli_parse(int argc, char *argv[], Opcoes *opts);
 
-// Imprime a mensagem de uso do programa em stderr.
-// Chamada automaticamente por cli_parse em caso de erro.
+/* Exibe manual de uso e opcoes em stderr */
 void cli_usage(const char *nome_programa);
 
 #endif /* CLI_H */
