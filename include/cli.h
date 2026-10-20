@@ -16,4 +16,4 @@ int cli_parse(int argc, char *argv[], Opcoes *opts);
 /* Exibe manual de uso e opcoes em stderr */
 void cli_usage(const char *nome_programa);
 
-#endif /* CLI_H */
+#endif

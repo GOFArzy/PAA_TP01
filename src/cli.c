@@ -4,6 +4,7 @@
 #include <string.h>
 
 void cli_usage(const char *nome_programa) {
+  if (!nome_programa) return;
   fprintf(
       stderr,
       "Uso: %s <arquivo_labirinto.txt> [opcoes]\n"
@@ -23,6 +24,7 @@ void cli_usage(const char *nome_programa) {
 }
 
 int cli_parse(int argc, char *argv[], Opcoes *opts) {
+  if (!opts) return 0;
   opts->arquivo_entrada = NULL;
   opts->modo_globo = 0;
   opts->modo_todos = 0;
