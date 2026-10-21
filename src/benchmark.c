@@ -6,21 +6,12 @@
 #include <time.h>
 #include <math.h>
 
-/* TODO: Pessoa 2 - incluir header do backtracking quando finalizado */
-// #include "backtracking.h"
+#include "backtracking.h"
 
 #define NUM_REPETICOES_PADRAO 10
 
 static double obter_tempo_ms(void) {
     return ((double)clock() / CLOCKS_PER_SEC) * 1000.0;
-}
-
-/* Mock temporario */
-static int resolver_mock_temporario(Labirinto *lab, Caminho *caminho) {
-    if (!lab || !caminho) return 0;
-    caminho_adicionar(caminho, lab->inicio_lin, lab->inicio_col);
-    caminho_adicionar(caminho, lab->bau_lin, lab->bau_col);
-    return 1;
 }
 
 static void executar_benchmark(const char *arquivo, int repeticoes) {
@@ -47,9 +38,7 @@ static void executar_benchmark(const char *arquivo, int repeticoes) {
 
         double t0 = obter_tempo_ms();
 
-        /* TODO: Pessoa 2 (backtracking.c) - substituir pela chamada real da busca */
-        // solucao = resolver_labirinto(lab, &c);
-        solucao = resolver_mock_temporario(lab, &c);
+        solucao = resolver_labirinto(lab, &c);
 
         double t1 = obter_tempo_ms();
         tempos[r] = t1 - t0;

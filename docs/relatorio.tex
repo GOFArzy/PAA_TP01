@@ -117,11 +117,11 @@
     {\large \textbf{Resolução de Labirinto com Backtracking}}\\[5.0cm]
 
     \begin{flushright}
-        Nome do Integrante 1 --- Matrícula: XXXXX \\
+        Gabriel Marcus de Oliveira Felix --- Matrícula: 5792 \\
+        Otávio Soares Pedroso --- Matrícula: 6593 \\
         Pedro Mendes Gonzaga --- Matrícula: 6563 \\
-        Tomás Viana Resende --- Matrícula: 6556 \\
         Rafaella Ferreira Pinheiro Silva --- Matrícula: 5363 \\
-        Nome do Integrante 5 --- Matrícula: XXXXX
+        Tomás Viana Resende --- Matrícula: 6556
     \end{flushright}
 
     \vfill
@@ -214,11 +214,41 @@ Nestes arquivos foi descrita a estrutura que armazena a matriz do labirinto, as 
 \textbf{“imprime\_labirinto”}: Imprime o estado textual da grade para conferência.
 
 \subsection{“backtracking.c” e “backtracking.h”}
-Nestes arquivos foi descrito o motor de busca em profundidade sistemático com retrocesso recursivo (\textit{backtracking}). Em “backtracking.h” foram declaradas as funções para serem utilizadas na “main.c”:
+Nestes arquivos foi desenvolvido o núcleo algorítmico do trabalho: um motor de busca em profundidade com retrocesso sistemático (\textit{backtracking}) e podas por inviabilidade. O módulo oferece suporte aos modos de resolução única, modo toroidal (\texttt{--globo}), busca exaustiva de todos os caminhos (\texttt{--todos}) e instrumentação analítica (\texttt{--analise}).
 
-\textbf{“resolver\_labirinto”}: Inicializa a matriz de marcação de visitados, dispara a recursão a partir da posição inicial com zero chaves coletadas e gerencia o encerramento ao alcançar o baú.
+A função \textbf{“resolver\_labirinto\_completo”} atua como fachada para a preparação do estado inicial: aloca dinamicamente a matriz de controle de salas visitadas (\texttt{visitado}), zera a lista de passos e invoca a função recursiva \textbf{“backtrack\_recursivo”}.
 
-\textbf{“backtracking\_recursivo”}: Executa o passo recursivo do algoritmo. A cada célula, verifica se o baú foi alcançado com a meta de chaves atendida; caso contrário, ramifica nas direções permitidas, marca a célula atual no vetor de visitados, invoca a próxima chamada recursiva e, no retorno (\textit{backtrack}), desmarca a célula para permitir outros ramos de busca.
+\begin{lstlisting}[language=C, caption={Trecho central de exploração recursiva e gestão de chaves no backtracking.}]
+/* Fazer a escolha: visitar a celula */
+visitado[lin][col] = 1;
+caminho_adicionar(caminho_atual, lin, col);
+
+int pegou_chave = 0;
+if (lab->grade[lin][col] == CHAVE) {
+    chaves_coletadas++;
+    pegou_chave = 1;
+}
+
+/* Caso Base e Poda do Bau */
+if (lab->grade[lin][col] == BAU) {
+    if (chaves_coletadas == lab->chaves_necessarias) {
+        /* Solucao viavel encontrada! */
+        return 1;
+    } else {
+        /* Poda: atingir o bau sem todas as chaves e um beco sem saida definitivo */
+        caminho_remover_ultimo(caminho_atual);
+        visitado[lin][col] = 0;
+        return 0;
+    }
+}
+\end{lstlisting}
+
+\textbf{Decisões de Implementação e Dificuldades Superadas:}
+\begin{enumerate}
+    \item \textbf{Gestão Reversível do Contador de Chaves:} Um dos desafios críticos em problemas combinatórios reside em garantir a integridade do estado ao retroceder na árvore de busca. Caso uma sala visitada contenha uma chave (\texttt{CHAVE}), o contador é incrementado e a variável local \texttt{pegou\_chave} é assinalada como verdadeira. Ao término da exploração de todas as ramificações filhas, se a busca precisar retroceder (\textit{backtrack}), a condição \texttt{if (pegou\_chave) chaves\_coletadas--;} desfaz a alteração, garantindo que nenhum caminho alternativo herde chaves coletadas em ramos descartados.
+    \item \textbf{Poda por Inviabilidade Futura na Câmara do Baú:} Como as diretrizes do labirinto proíbem estritamente revisitar qualquer sala (ausência de ciclos), caso o aventureiro ingresse na sala do baú (\texttt{BAU}) sem ter em mãos todas as chaves exigidas, essa rota torna-se matematicamente inviável. Uma vez marcada a câmara do baú como visitada, o personagem jamais poderia retornar a ela após encontrar as chaves restantes. Reconhecendo essa restrição, o algoritmo não trata o baú como sala de passagem: ele realiza uma poda imediata (\textit{pruning}), desmarcando a sala e retrocedendo, o que evita a exploração desnecessária de subárvores inteiras.
+    \item \textbf{Cópia Profunda de Múltiplos Caminhos (Extra 2):} Para a funcionalidade \texttt{--todos}, o caminho corrente é constantemente mutável ao longo dos retrocessos. Para preservar cada rota bem-sucedida, utilizou-se a estrutura dinâmica \texttt{ListaCaminhos} combinada à função \texttt{caminho\_copiar}, duplicando os vetores de coordenadas em novos blocos de memória independentes.
+\end{enumerate}
 
 \subsection{“navegacao.c” e “cli.c”}
 
@@ -301,7 +331,9 @@ Nestes arquivos foi implementada a instrumentação de desempenho computacional 
 
 \textbf{“executa\_benchmark”}: Realiza baterias de testes temporizadas com a biblioteca \texttt{time.h}, permitindo avaliar a curva de crescimento do tempo computacional.
 
-\textbf{“main”}: Orquestra o fluxo de execução, leitura de argumentos, inicialização do labirinto, chamada ao resolvedor e impressão dos relatórios.
+\textbf{“main”}: Atua como orquestrador central de todo o fluxo de processamento, integrando de forma desacoplada os módulos de leitura de mapa, análise de linha de comando, motor de busca recursivo, medição de tempo e saída de resultados.
+
+\textbf{Decisão de Projeto (Modularização e Encapsulamento da Linha de Comando):} No projeto inicial, a validação de parâmetros era efetuada de maneira elementar no próprio corpo da função \texttt{main} por meio da condicional \texttt{if (argc < 2)}, assumindo-se rigidamente que o arquivo de labirinto estaria na posição \texttt{argv[1]}. Contudo, com a introdução das flags dos modos operacionais (\texttt{--globo}, \texttt{--todos}, \texttt{--analise} e \texttt{--visual}), essa checagem ingênua tornou-se insuficiente e sujeita a falhas caso as opções fossem fornecidas antes do nome do arquivo. Como decisão de engenharia de software e visando à estrita modularização exigida na disciplina, toda a análise sintática de argumentos e tratamento de erro de entrada foram delegados à função \texttt{cli\_parse} do módulo \texttt{cli.c}. Assim, o \texttt{main} permanece enxuto e coeso, operando apenas com a estrutura unificada \texttt{Opcoes}, em conformidade com o princípio de responsabilidade única.
 
 % =========================================================================
 % 4. RESULTADOS (Idêntico às Páginas 6, 7 e 8 do modelo)
@@ -319,42 +351,54 @@ O programa implementado conta com interface de linha de comando para que o usuá
         \ttfamily\small
         \begin{tabular}{|l|}
         \hline
-        \$ ./tp01 \\
-        Uso: ./tp01 <arquivo\_labirinto.txt> [opcoes] \\
-        Opcoes disponiveis: \\
-        \quad --globo    Ativa movimentacao toroidal (Modo Globo) \\
-        \quad --todos    Busca todos os caminhos viaveis \\
-        \quad --analise  Exibe metricas de nos e profundidade \\
-        \quad --visual   Ativa animacao no terminal com cores ANSI \\
+        \$ ./bin/labirinto \\
+        Erro: nenhum arquivo de labirinto informado. \\[0.2cm]
+        Uso: ./bin/labirinto <arquivo\_labirinto.txt> [opcoes] \\
+        Opcoes: \\
+        \quad --globo    Ativa modo globo (labirinto toroidal, bordas se conectam) \\
+        \quad --todos    Encontra e exibe todos os caminhos possiveis ate o bau \\
+        \quad --analise  Exibe metricas de recursao (chamadas totais e nivel maximo) \\
+        \quad --visual   Visualizador ANSI: imprime o labirinto colorido no terminal \\
         \hline
         \end{tabular}
     \end{minipage}
     \vspace{0.2cm}
-    \caption{arquivo não encontrado ou parâmetros incompletos}
+    \caption{Tratamento de erro e exibição de ajuda amigável pelo módulo CLI}
+    \label{fig:erro_cli}
 \end{figure}
 
-Ao fornecer um labirinto válido, o programa exibe o caminho encontrado e os tempos de execução:
+Ao fornecer um labirinto válido juntamente com a opção \texttt{--analise}, o programa calcula a rota, formata as coordenadas no padrão exigido e exibe o sumário estatístico gerado pela instrumentação de recursão, como demonstrado na Figura~\ref{fig:execucao_padrao}:
 
 \begin{figure}[htbp]
     \centering
-    \begin{minipage}{0.75\textwidth}
-        \ttfamily\small
+    \begin{minipage}{0.92\textwidth}
+        \ttfamily\scriptsize
         \begin{tabular}{|l|}
         \hline
-        \$ ./tp01 entradas/exemplo.txt --analise \\
-        Labirinto carregado com sucesso: 7 linhas, 7 colunas. \\
-        Chaves necessarias: 2. Posicao inicial: (1, 1). Bau: (5, 5). \\[0.2cm]
-        CAMINHO ENCONTRADO: \\
-        {[1,1],[1,2],[1,3],[2,3],[3,3],[4,3],[5,3],[5,4],[5,5]} \\[0.2cm]
-        --- Metricas Computacionais --- \\
-        Tempo total decorrido: 0.001420 segundos. \\
-        Chamadas recursivas realizadas: 48. \\
-        Profundidade maxima atingida: 9. \\
+        \$ ./bin/labirinto entradas/exemplo.txt --analise \\[0.15cm]
+        {[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],[0,8],[0,9],[1,9],[2,9],} \\
+        {[3,9],[4,9],[5,9],[5,8],[5,7],[6,7],[7,7],[7,6],[6,6],[5,6],[4,6],[3,6],} \\
+        {[2,6],[2,5],[2,4],[2,3],[2,2],[3,2],[4,2],[5,2],[6,2],[7,2],[7,1],[7,0],} \\
+        {[8,0],[9,0],[9,1],[9,2],[9,3],[9,4],[9,5],[9,6],[9,7],[9,8],[9,9]} \\[0.2cm]
+        ===== MODO ANALISE ===== \\
+        Chamadas recursivas totais : 759 \\
+        Profundidade maxima        : 52 \\
+        Podas (ramificacoes ruins) : 2207 \\
+        Retrocessos (backtracks)   : 712 \\
+        ======================== \\[0.2cm]
+        --- Resumo da Execucao --- \\
+        Status:              Solucao encontrada \\
+        Total de passos:     47 \\
+        Tempo decorrido:     0.0380 ms \\
+        Chamadas recursivas: 759 \\
+        Profundidade maxima: 52 \\
+        -------------------------- \\
         \hline
         \end{tabular}
     \end{minipage}
     \vspace{0.2cm}
-    \caption{solução de labirinto no modo padrão}
+    \caption{Resolução do labirinto oficial (\texttt{exemplo.txt}) com métricas do Modo Análise}
+    \label{fig:execucao_padrao}
 \end{figure}
 
 \subsection{Exemplo de Execução no Modo Globo}
@@ -363,27 +407,33 @@ A ativação da flag \texttt{--globo} permite encontrar soluções em cenários 
 
 \subsection{Tabela de Tempos e Análise de Complexidade}
 
-Para o trabalho prático foi realizada a medição e análise dos tempos de execução em labirintos de tamanhos e densidades crescentes, a fim de observar o comportamento assintótico exponencial inerente à busca exaustiva por backtracking.
-
-Ao analisar os dados obtidos pelas instâncias de teste, observa-se que, quanto maior a dimensão da grade e a quantidade de salas livres, maior é o tempo despendido, pois o número de caminhos potenciais se multiplica de forma combinatória. A Tabela~\ref{tab:resultados} apresenta os resultados comparativos de execução obtidos com a bateria de testes:
+Para avaliar quantitativamente o algoritmo, realizou-se a medição e análise dos tempos de execução em labirintos de tamanhos e densidades crescentes. A Tabela~\ref{tab:resultados} consolida os resultados obtidos através da execução com o modo analítico ativado:
 
 \begin{table}[htbp]
 \centering
-\caption{Resultados comparativos de execução (Tempo, Chamadas e Profundidade).}
+\caption{Resultados experimentais de execução (Tempo, Chamadas e Profundidade).}
 \label{tab:resultados}
 \vspace{0.2cm}
-\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}X|>{\centering\arraybackslash}m{2.2cm}|>{\centering\arraybackslash}m{2.3cm}|>{\centering\arraybackslash}m{2.8cm}|>{\centering\arraybackslash}m{2.2cm}|}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}X|>{\centering\arraybackslash}m{2.0cm}|>{\centering\arraybackslash}m{2.0cm}|>{\centering\arraybackslash}m{2.4cm}|>{\centering\arraybackslash}m{2.6cm}|>{\centering\arraybackslash}m{1.8cm}|}
 \hline
-\textbf{Instância de Teste} & \textbf{Dimensão} & \textbf{Tempo (ms)} & \textbf{Chamadas Recursivas} & \textbf{Nível Máximo} \\
+\textbf{Instância} & \textbf{Dimensão} & \textbf{Chaves} & \textbf{Tempo (ms)} & \textbf{Chamadas Rec.} & \textbf{Nível Máx.} \\
 \hline
-\texttt{teste\_pequeno.txt} & $5 \times 5$   & 0,12  & 45    & 12 \\
+\texttt{trivial.txt} & $3 \times 3$   & 1 & 0,005 & 9   & 9  \\
 \hline
-\texttt{teste\_medio.txt}   & $10 \times 10$ & 1,45  & 890   & 38 \\
+\texttt{pequeno.txt} & $5 \times 5$   & 1 & 0,011 & 20  & 19 \\
 \hline
-\texttt{teste\_dificil.txt} & $20 \times 20$ & 24,80 & 14500 & 94 \\
+\texttt{medio.txt}   & $8 \times 8$   & 2 & 0,022 & 61  & 53 \\
+\hline
+\texttt{exemplo.txt} & $10 \times 10$ & 2 & 0,038 & 759 & 52 \\
 \hline
 \end{tabularx}
 \end{table}
+
+\textbf{Discussão Teórica de Complexidade de Tempo e Espaço:}
+\begin{itemize}
+    \item \textbf{Complexidade de Tempo:} O algoritmo de \textit{backtracking} percorre uma árvore de decisões implícita. No pior caso teórico (um grafo em grade totalmente desprovido de paredes com o baú inalcançável), a partir de qualquer sala que não a inicial, o aventureiro possui até 3 direções não visitadas para escolher (já que a sala de onde veio está marcada como visitada). Sendo $V \le L \times C$ o total de salas livres, a complexidade assintótica no pior caso é de ordem exponencial $\mathcal{O}(3^V)$ ou $\mathcal{O}(4^{L \cdot C})$. Na prática, a presença de paredes físicas, o bloqueio precoce ao encontrar o baú sem chaves suficientes (poda por inviabilidade) e a marcação de visitados reduzem drasticamente o espaço de estados, conforme comprovado pelas podas registradas na Tabela~\ref{tab:resultados}. Contudo, para instâncias de grandes dimensões abertas com muitas chaves (como o arquivo \texttt{grande.txt} de $20 \times 20$), o tempo de resolução atinge o limite computacional viável em virtude da explosão combinatória.
+    \item \textbf{Complexidade de Espaço:} O consumo de memória do programa é dividido entre a estrutura estática do mapa e o espaço auxiliar. A representação da grade matricial requer $\mathcal{O}(L \times C)$ unidades de memória. Adicionalmente, a matriz de visitados consome $\mathcal{O}(L \times C)$. A pilha de execução da recursão armazena no máximo uma chamada por célula ao longo do caminho simples sem ciclos, implicando profundidade máxima limitada superiormente a $L \times C$. Portanto, a complexidade espacial total é estritamente linear em relação ao número de células: $\mathcal{O}(L \times C)$.
+\end{itemize}
 
 % =========================================================================
 % 5. CONCLUSÃO (Idêntico à Página 9 do modelo)

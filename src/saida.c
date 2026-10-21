@@ -20,7 +20,7 @@ void imprimir_caminho(const Caminho *caminho) {
 }
 
 void imprimir_sem_solucao(void) {
-    printf("Nao foi possivel encontrar um caminho valido para coletar todas as chaves e abrir o bau.\n");
+    printf("Nao ha um caminho possivel para a entrada de dados fornecida\n");
 }
 
 int salvar_caminho_arquivo(const char *nome_arquivo, const Caminho *caminho) {
