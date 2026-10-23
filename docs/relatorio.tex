@@ -289,12 +289,99 @@ int movimento_valido_globo(const Labirinto *lab, int **visitado, int lin, int co
 
 \textbf{Fundamentação Algébrica:} No padrão C99 (ISO/IEC 9899 §6.5.5), o operador binário \texttt{\%} opera com truncamento em direção a zero, preservando o sinal algébrico negativo caso o dividendo seja negativo (por exemplo, \texttt{-1 \% 10 == -1}). A adição da dimensão total ($L$ e $C$) antes da aplicação do resto garante um valor estritamente não-negativo sem alterar a classe de congruência. Uma vez normalizadas as coordenadas no intervalo $[0, L-1]$ e $[0, C-1]$, a função \textbf{“movimento\_valido\_globo”} dispensa o teste de fronteiras externas, limitando-se a checar paredes e células já visitadas.
 
+% -------------------------------------------------------------------------
+% SUBSEÇÃO NOVA: analise.c e visualizador.c
+% -------------------------------------------------------------------------
 \subsection{“analise.c” e “visualizador.c”}
-Nestes arquivos foi implementada a instrumentação de desempenho computacional e a interface visual interativa em terminal:
 
-\textbf{“analise\_registrar\_chamada”}: Contabiliza a quantidade de nós visitados e a profundidade máxima alcançada pela pilha de recursão.
+Nestes arquivos foram implementados o módulo de instrumentação de desempenho e o visualizador em terminal com sequências de escape ANSI, ambos desacoplados da lógica de decisão do \textit{backtracking}.
 
-\textbf{“visualizar\_passo”}: Utiliza sequências de escape ANSI para colorir e atualizar a grade do labirinto no terminal quadro a quadro, conferindo efeito de animação da busca.
+\subsubsection{Módulo de análise de métricas}
+
+As métricas são agrupadas na estrutura \texttt{AnaliseMetricas}, que armazena o total de chamadas recursivas, a profundidade corrente e máxima, o número de podas e o número de retrocessos. Foram criadas as seguintes funções:
+
+\textbf{“analise\_iniciar”}: Zera todos os contadores da estrutura antes da execução da busca.
+
+\textbf{“analise\_registrar\_chamada”}: Chamada a cada entrada em \textbf{“backtracking\_recursivo”}. Incrementa o total de chamadas, atualiza a profundidade corrente e, caso esta supere o máximo já observado, atualiza a profundidade máxima.
+
+\textbf{“analise\_registrar\_poda”} e \textbf{“analise\_registrar\_retrocesso”}: Incrementam, respectivamente, o contador de ramificações descartadas e o de retornos (\textit{backtracks}) da recursão.
+
+\textbf{“analise\_imprimir”}: Exibe o relatório final no terminal quando a opção \texttt{--analise} está ativa.
+
+\begin{lstlisting}[language=C, caption={Registro de chamadas e profundidade máxima em analise.c.}]
+void analise_registrar_chamada(AnaliseMetricas *m, int profundidade) {
+    if (!m) return;
+    m->chamadas_recursivas++;
+    m->profundidade_atual = profundidade;
+    if (profundidade > m->profundidade_maxima)
+        m->profundidade_maxima = profundidade;
+}
+\end{lstlisting}
+
+\textbf{Decisão de Implementação:} Cada registro consiste apenas em um incremento, uma atribuição e uma comparação, todos de custo $O(1)$. Assim, a instrumentação não altera a complexidade assintótica do algoritmo, e manter as métricas em um módulo separado evita misturar contabilidade com a lógica de busca. A verificação \texttt{if (!m) return;} permite desativar a análise passando ponteiro nulo.
+
+\subsubsection{Visualizador ANSI}
+
+O módulo \texttt{visualizador.c} renderiza o labirinto colorido no terminal. As constantes de cor (\texttt{ANSI\_BG\_*}, \texttt{ANSI\_FG\_*}, \texttt{ANSI\_RESET}) foram definidas em \texttt{visualizador.h} como macros de sequências de escape do tipo \texttt{\textbackslash033[<código>m}. As funções do módulo são:
+
+\textbf{“visualizador\_limpar\_tela”}: Emite a sequência \texttt{\textbackslash033[H\textbackslash033[J}, que move o cursor para o canto superior esquerdo (\texttt{\textbackslash033[H}) e apaga o conteúdo dali até o fim da tela (\texttt{\textbackslash033[J}), permitindo redesenhar sobre o mesmo local.
+
+\textbf{“visualizador\_ocultar\_cursor”} e \textbf{“visualizador\_mostrar\_cursor”}: Usam \texttt{\textbackslash033[?25l} e \texttt{\textbackslash033[?25h} para esconder o cursor durante a animação e restaurá-lo ao final, evitando cintilação.
+
+\textbf{“visualizador\_desenhar”}: Desenha um quadro. Cria uma matriz auxiliar marcando as células pertencentes ao caminho, limpa a tela e imprime cada célula com sua cor. A posição atual é destacada com \texttt{@} e as demais células do caminho com \texttt{*}.
+
+\textbf{“visualizador\_desenhar\_caminho\_final”}: Desenha o labirinto com o caminho completo, sem destacar posição atual.
+
+\textbf{“visualizador\_animar\_caminho”}: Percorre o caminho encontrado e desenha um quadro por passo.
+
+A Tabela~\ref{tab:cores} resume os símbolos e as cores adotados na renderização de cada tipo de célula.
+
+\begin{table}[htbp]
+\centering
+\caption{Cores e símbolos usados na renderização.}
+\label{tab:cores}
+\vspace{0.2cm}
+\begin{tabular}{|l|c|l|}
+\hline
+\textbf{Elemento} & \textbf{Símbolo} & \textbf{Cor (fundo / texto)} \\
+\hline
+Parede           & \texttt{\#} & branco / preto \\
+\hline
+Sala livre       & \texttt{.}  & preto / branco \\
+\hline
+Chave            & \texttt{K}  & amarelo / preto \\
+\hline
+Baú              & \texttt{X}  & magenta / branco \\
+\hline
+Início           & \texttt{A}  & verde / preto \\
+\hline
+Caminho          & \texttt{*}  & azul / branco \\
+\hline
+Posição atual    & \texttt{@}  & ciano / preto \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}[language=C, caption={Laço de animação quadro a quadro em visualizador.c.}]
+for (int k = 0; k < caminho->tamanho; k++) {
+    visualizador_desenhar(lab, caminho, k);
+    fflush(stdout);
+    usleep(delay_us);
+}
+\end{lstlisting}
+
+\textbf{Decisão de Implementação:} O efeito de animação resulta da combinação de três elementos: a limpeza da tela a cada quadro; o \texttt{fflush(stdout)}, necessário porque a saída padrão é armazenada em \textit{buffer} e, sem a descarga explícita, os quadros apareceriam de uma só vez; e a função \texttt{usleep()} da biblioteca \texttt{unistd.h}, que suspende a execução por \texttt{delay\_us} microssegundos entre quadros (valor utilizado: \textbf{XXX~\textmu s}). Como a animação reproduz o caminho já encontrado, seu custo adicional é $O(k \cdot L \cdot C)$ para um caminho de $k$ passos em uma grade $L \times C$, e ocorre somente quando a opção \texttt{--visual} é informada, não interferindo nas medições de tempo do \textit{benchmark}.
+
+% Se o arquivo da imagem existir, ele é incluído; caso contrário, aparece um quadro de aviso (o PDF compila mesmo assim).
+\begin{figure}[htbp]
+    \centering
+    \IfFileExists{img/visualizador.png}{%
+        \includegraphics[width=0.55\textwidth]{img/visualizador.png}%
+    }{%
+        \fbox{\parbox{0.55\textwidth}{\centering\vspace{1.5cm}[Inserir captura de tela em img/visualizador.png]\vspace{1.5cm}}}%
+    }
+    \caption{Quadro da animação ANSI no terminal}
+\end{figure}
 
 \subsection{“saida.c”, “benchmark.c” e “main.c”}
 \textbf{“imprime\_caminho”}: Formata a rota percorrida no padrão exigido pela especificação: $[l_1,c_1],[l_2,c_2],\dots,[l_k,c_k]$.
