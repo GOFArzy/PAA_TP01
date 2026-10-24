@@ -38,11 +38,7 @@ int main(int argc, char *argv[]) {
     clock_t t_inicio = clock();
 
     /* Execução da busca via Backtracking */
-    int sucesso = resolver_labirinto_completo(lab,
-                                            &caminho_solucao,
-                                            opts.modo_todos ? &todos_caminhos : NULL,
-                                            &opts,
-                                            ptr_metricas);
+    int sucesso = resolver_labirinto_completo(lab,&caminho_solucao, opts.modo_todos ? &todos_caminhos : NULL, &opts, ptr_metricas);
 
     clock_t t_fim = clock();
     double tempo_ms = ((double)(t_fim - t_inicio) / CLOCKS_PER_SEC) * 1000.0;
