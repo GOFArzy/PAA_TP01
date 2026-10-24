@@ -117,7 +117,7 @@
     {\large \textbf{Resolução de Labirinto com Backtracking}}\\[5.0cm]
 
     \begin{flushright}
-        Gabriel Marcus de Oliveira Felix --- Matrícula: 5792 \\
+        Gabriel Marcus de Oliveira Félix --- Matrícula: 5792 \\
         Otávio Soares Pedroso --- Matrícula: 6593 \\
         Pedro Mendes Gonzaga --- Matrícula: 6563 \\
         Rafaella Ferreira Pinheiro Silva --- Matrícula: 5363 \\
@@ -204,14 +204,60 @@ Sendo assim, a pasta principal do projeto contém arquivos referentes ao reposit
 % =========================================================================
 \section{Desenvolvimento}
 
-\subsection{“mapa.c” e “mapa.h”}
-Nestes arquivos foi descrita a estrutura que armazena a matriz do labirinto, as coordenadas de início, do baú e a quantidade de chaves. Foram criadas as seguintes funções:
+\subsection{“mapa.c”, “mapa.h” e “gerador.c”}
 
-\textbf{“carrega\_labirinto”}: Lê o arquivo de texto formatado, aloca dinamicamente a matriz bidimensional de células e preenche as informações topológicas.
+O módulo do mapa é responsável pelo gerenciamento estrutural dos dados do labirinto, pelo carregamento e validação de arquivos de texto, pelo controle seguro de memória dinâmica na \textit{Heap} e pela implementação do programa independente gerador de mapas (\textbf{Extra 1}).
 
-\textbf{“libera\_labirinto”}: Libera a memória alocada para a matriz e para a estrutura de dados.
+\subsubsection{Estruturas de Dados e Módulo do Mapa (mapa.c / mapa.h)}
+No cabeçalho \texttt{mapa.h} foram definidas as entidades centrais utilizadas por todos os demais módulos:
+\begin{itemize}
+    \item \texttt{TipoCelula}: tipo enumerado que classifica semanticamente cada posição da grade (\texttt{SALA\_VAZIA=0}, \texttt{PAREDE=1}, \texttt{CHAVE=2}, \texttt{BAU=3}, \texttt{AVENTUREIRO=4}), conferindo clareza e segurança de tipo;
+    \item \texttt{Labirinto}: estrutura principal contendo as dimensões (\texttt{linhas}, \texttt{colunas}), a quantidade de chaves necessárias (\texttt{chaves\_necessarias}), as coordenadas pré-indexadas de início (\texttt{inicio\_lin}, \texttt{inicio\_col}) e do baú (\texttt{bau\_lin}, \texttt{bau\_col}), e o ponteiro duplo para a matriz de células (\texttt{TipoCelula **grade});
+    \item \texttt{Posicao} e \texttt{Caminho}: vetor dinâmico de coordenadas que registra a trajetória percorrida pelo aventureiro. A capacidade é expandida geometricamente via \texttt{realloc} sob demanda, garantindo custo amortizado $O(1)$ por inserção.
+\end{itemize}
 
-\textbf{“imprime\_labirinto”}: Imprime o estado textual da grade para conferência.
+\begin{lstlisting}[language=C, caption={Estrutura de dados Labirinto e enumeração TipoCelula em mapa.h.}]
+typedef enum {
+    SALA_VAZIA  = 0,  /* '0' - sala livre */
+    PAREDE      = 1,  /* '1' - obstaculo intransponivel */
+    CHAVE       = 2,  /* 'C' - sala com chave */
+    BAU         = 3,  /* 'X' - sala com bau */
+    AVENTUREIRO = 4   /* 'A' - posicao inicial */
+} TipoCelula;
+
+typedef struct {
+    int linhas;
+    int colunas;
+    int chaves_necessarias;
+    TipoCelula **grade;
+    int inicio_lin, inicio_col;
+    int bau_lin, bau_col;
+} Labirinto;
+\end{lstlisting}
+
+As funções centrais implementadas em \texttt{mapa.c} englobam:
+\begin{itemize}
+    \item \textbf{“carregar\_labirinto”}: Abre o arquivo texto, lê e valida as dimensões e o total de chaves com \texttt{fscanf}, aloca a matriz bidimensional e mapeia os tokens para \texttt{TipoCelula}. Valida a existência de exatamente um ponto de início \texttt{A} e um baú \texttt{X}. Caso ocorra qualquer erro de alocação ou dados corrompidos, a função realiza a desalocação em cascata de todas as linhas alocadas anteriormente antes de retornar \texttt{NULL}, garantindo falha segura;
+    \item \textbf{“liberar\_labirinto”}: Desaloca linha por linha a matriz de células, o vetor de ponteiros e a struct raiz, eliminando qualquer possibilidade de vazamento de memória (\textit{memory leak});
+    \item \textbf{“alocar\_matriz\_int”} e \textbf{“liberar\_matriz\_int”}: Alocam e desalocam matrizes de inteiros zeradas (via \texttt{calloc}), utilizadas pelo módulo de \textit{backtracking} para o controle de células visitadas;
+    \item \textbf{Operações sobre “Caminho”}: Funções de ciclo de vida (\texttt{caminho\_init}, \texttt{caminho\_liberar}), inserção (\texttt{caminho\_adicionar}), remoção para retrocesso em $O(1)$ (\texttt{caminho\_remover\_ultimo}) e cópia profunda (\texttt{caminho\_copiar}).
+\end{itemize}
+
+\subsubsection{Gerador de Mapas Solúveis (gerador.c — Extra 1)}
+Para atender ao \textbf{Extra 1}, foi desenvolvido o programa independente \texttt{gerador.c} em 100\% C nativo (C99), utilizando unicamente \texttt{<stdio.h>}, \texttt{<stdlib.h>}, \texttt{<string.h>} e \texttt{<time.h>}.
+
+Sorteios puramente aleatórios de células com probabilidade estática frequentemente geram labirintos desconexos ou com chaves isoladas por paredes, tornando-os insolúveis. Para contornar esse problema e viabilizar testes rigorosos, o gerador adota uma abordagem construtiva garantida:
+\begin{enumerate}
+    \item \textbf{Caminho Garantido via DFS Randomizada}: A partir de $A$ em $(0,0)$, executa-se uma Busca em Profundidade com embaralhamento uniforme das 4 direções via algoritmo de Fisher-Yates, traçando uma rota sinuosa e sem repetições até o baú em $(linhas-1, colunas-1)$;
+    \item \textbf{Distribuição Protegida das Chaves}: As células do caminho encontrado são marcadas em uma máscara de proteção. As chaves exigidas são sorteadas exclusivamente entre as posições intermediárias dessa rota garantida, assegurando matematicamente que o aventureiro poderá coletá-las;
+    \item \textbf{Inserção de Paredes}: As células externas ao caminho protegido recebem paredes com probabilidade parametrizável (padrão de 35\%), preservando a existência de ao menos uma solução viável.
+\end{enumerate}
+
+O gerador é invocado via linha de comando recebendo parâmetros via \texttt{argc/argv}:
+\begin{center}
+\texttt{./bin/gerador <linhas> <colunas> <num\_chaves> <saida.txt> [seed] [prob\_paredes]}
+\end{center}
+O suporte a semente (\texttt{seed}) permite reproduzir os mesmos cenários para fins de comparação empírica no \textit{benchmark}.
 
 \subsection{“backtracking.c” e “backtracking.h”}
 Nestes arquivos foi desenvolvido o núcleo algorítmico do trabalho: um motor de busca em profundidade com retrocesso sistemático (\textit{backtracking}) e podas por inviabilidade. O módulo oferece suporte aos modos de resolução única, modo toroidal (\texttt{--globo}), busca exaustiva de todos os caminhos (\texttt{--todos}) e instrumentação analítica (\texttt{--analise}).
