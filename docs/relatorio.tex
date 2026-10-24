@@ -327,13 +327,43 @@ Nestes arquivos foi implementada a instrumentação de desempenho computacional 
 \textbf{“visualizar\_passo”}: Utiliza sequências de escape ANSI para colorir e atualizar a grade do labirinto no terminal quadro a quadro, conferindo efeito de animação da busca.
 
 \subsection{“saida.c”, “benchmark.c” e “main.c”}
-\textbf{“imprime\_caminho”}: Formata a rota percorrida no padrão exigido pela especificação: $[l_1,c_1],[l_2,c_2],\dots,[l_k,c_k]$.
+Nestes arquivos foram implementados a formatação da rota final, o utilitário de avaliação empírica de desempenho e a orquestração central do sistema, além da infraestrutura de compilação automatizada via Makefile. Foram criadas as seguintes funções principais:
 
-\textbf{“executa\_benchmark”}: Realiza baterias de testes temporizadas com a biblioteca \texttt{time.h}, permitindo avaliar a curva de crescimento do tempo computacional.
+\textbf{“imprimir\_caminho”}: Percorre o vetor dinâmico de coordenadas e imprime a sequência de salas no padrão estrito $[l_0,c_0],[l_1,c_1],\dots,[l_{k-1},c_{k-1}]$, assegurando a ausência de vírgulas residuais no final da linha.
 
-\textbf{“main”}: Atua como orquestrador central de todo o fluxo de processamento, integrando de forma desacoplada os módulos de leitura de mapa, análise de linha de comando, motor de busca recursivo, medição de tempo e saída de resultados.
+\textbf{“imprimir\_sem\_solucao”}: Emite a mensagem padronizada exigida pela disciplina quando não existe rota viável até o baú.
 
-\textbf{Decisão de Projeto (Modularização e Encapsulamento da Linha de Comando):} No projeto inicial, a validação de parâmetros era efetuada de maneira elementar no próprio corpo da função \texttt{main} por meio da condicional \texttt{if (argc < 2)}, assumindo-se rigidamente que o arquivo de labirinto estaria na posição \texttt{argv[1]}. Contudo, com a introdução das flags dos modos operacionais (\texttt{--globo}, \texttt{--todos}, \texttt{--analise} e \texttt{--visual}), essa checagem ingênua tornou-se insuficiente e sujeita a falhas caso as opções fossem fornecidas antes do nome do arquivo. Como decisão de engenharia de software e visando à estrita modularização exigida na disciplina, toda a análise sintática de argumentos e tratamento de erro de entrada foram delegados à função \texttt{cli\_parse} do módulo \texttt{cli.c}. Assim, o \texttt{main} permanece enxuto e coeso, operando apenas com a estrutura unificada \texttt{Opcoes}, em conformidade com o princípio de responsabilidade única.
+\textbf{“salvar\_caminho\_arquivo”}: Grava o trajeto percorrido em arquivo texto para verificação automatizada de gabaritos.
+
+\textbf{“executar\_benchmark”}: Realiza baterias de testes com amostragem estatística repetida ($N = 10$) utilizando a biblioteca \texttt{time.h}, calculando média amostral, desvio padrão e imprimindo a tabela comparativa no terminal.
+
+\textbf{“main”}: Atua como orquestrador central de todo o fluxo de processamento, integrando de forma desacoplada os módulos de leitura de mapa, análise de linha de comando, motor de busca recursivo, medição de tempo e liberação completa de recursos.
+
+\begin{lstlisting}[language=C, caption={Formatação da rota percorrida e tratamento de extremidades sem vírgula residual.}]
+void imprimir_caminho(const Caminho *caminho) {
+    if (!caminho || caminho->tamanho == 0) {
+        printf("Sem passos registrados.\n");
+        return;
+    }
+
+    /* Formato padrao: [l,c],[l,c],... */
+    for (int i = 0; i < caminho->tamanho; i++) {
+        printf("[%d,%d]", caminho->passos[i].linha, caminho->passos[i].coluna);
+        if (i < caminho->tamanho - 1) {
+            printf(",");
+        }
+    }
+    printf("\n");
+}
+\end{lstlisting}
+
+\textbf{Decisões de Implementação e Dificuldades Superadas:}
+\begin{enumerate}
+    \item \textbf{Eliminação de Delimitadores Residuais na Saída:} Conforme a listagem acima, a inserção da vírgula separadora é condicionada estritamente ao predicado \texttt{i < caminho->tamanho - 1}. Isso previne a ocorrência de vírgulas pendentes ao final da sequência, garantindo conformidade rigorosa com corretores automáticos e scripts de avaliação da disciplina.
+    \item \textbf{Modularização e Encapsulamento da Linha de Comando no main:} No projeto inicial, a validação de parâmetros era efetuada de maneira elementar no próprio corpo da função \texttt{main} por meio da condicional \texttt{if (argc < 2)}, assumindo-se rigidamente que o arquivo de labirinto estaria na posição \texttt{argv[1]}. Com a introdução das flags operacionais (\texttt{--globo}, \texttt{--todos}, \texttt{--analise} e \texttt{--visual}), essa checagem ingênua tornou-se insuficiente. Como decisão de engenharia de software, toda a análise sintática de argumentos e tratamento de erro de entrada foram delegados à função \texttt{cli\_parse} do módulo \texttt{cli.c}. Assim, o \texttt{main} permanece enxuto e coeso, operando apenas com a estrutura unificada \texttt{Opcoes} e orquestrando o ciclo de vida dos dados (carregamento, busca, medição temporal via \texttt{clock()}, impressão e liberação de memória).
+    \item \textbf{Amostragem Estatística e Tabela Comparativa no Benchmark (Extra 5):} Em algoritmos combinatórios, medições isoladas sofrem variações causadas pelo escalonador do sistema operacional. Para contornar esse problema, o utilitário \texttt{benchmark.c} executa cada labirinto $N$ vezes consecutivas (padrão $N=10$), computa a média amostral ($\bar{x} = \frac{1}{N}\sum t_i$), o desvio padrão ($s = \sqrt{\frac{1}{N-1}\sum (t_i - \bar{x})^2}$) e gera automaticamente uma tabela comparativa consolidada no console, permitindo confrontar tempos e dispersões entre diferentes instâncias.
+    \item \textbf{Automação da Compilação e Portabilidade com Makefile:} O arquivo \texttt{Makefile} foi construído sob o padrão C99 estrito (\texttt{-Wall -Wextra -std=c99 -I./include -g}), sem gerar qualquer advertência durante a compilação. Além disso, conta com detecção automática do sistema operacional (\texttt{Windows\_NT} ou POSIX/Linux) para compatibilidade dos comandos de criação (\texttt{mkdir}) e limpeza (\texttt{clean}), compilando alvos independentes para o programa principal (\texttt{bin/labirinto}), gerador (\texttt{bin/gerador}) e benchmark (\texttt{bin/benchmark}).
+\end{enumerate}
 
 % =========================================================================
 % 4. RESULTADOS (Idêntico às Páginas 6, 7 e 8 do modelo)
@@ -411,10 +441,11 @@ Para avaliar quantitativamente o algoritmo, realizou-se a medição e análise d
 
 \begin{table}[htbp]
 \centering
+\small
 \caption{Resultados experimentais de execução (Tempo, Chamadas e Profundidade).}
 \label{tab:resultados}
 \vspace{0.2cm}
-\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}X|>{\centering\arraybackslash}m{2.0cm}|>{\centering\arraybackslash}m{2.0cm}|>{\centering\arraybackslash}m{2.4cm}|>{\centering\arraybackslash}m{2.6cm}|>{\centering\arraybackslash}m{1.8cm}|}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{2.6cm}|*{5}{>{\centering\arraybackslash}X|}}
 \hline
 \textbf{Instância} & \textbf{Dimensão} & \textbf{Chaves} & \textbf{Tempo (ms)} & \textbf{Chamadas Rec.} & \textbf{Nível Máx.} \\
 \hline
@@ -429,10 +460,33 @@ Para avaliar quantitativamente o algoritmo, realizou-se a medição e análise d
 \end{tabularx}
 \end{table}
 
+Complementarmente, a Tabela~\ref{tab:benchmark} apresenta os resultados da suíte de testes (\texttt{benchmark.c}) sob $N = 10$ repetições para mitigar ruídos do escalonador do sistema operacional, exibindo tempo médio, mínimo, máximo e o desvio padrão amostral ($s$):
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Resultados estatísticos da suíte de benchmark ($N = 10$ repetições).}
+\label{tab:benchmark}
+\vspace{0.2cm}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{2.6cm}|*{6}{>{\centering\arraybackslash}X|}}
+\hline
+\textbf{Instância} & \textbf{Dimensão} & \textbf{Passos} & \textbf{Média (ms)} & \textbf{Mínimo (ms)} & \textbf{Máximo (ms)} & \textbf{Desvio ($s$)} \\
+\hline
+\texttt{trivial.txt} & $3 \times 3$   & 9  & 0,005 & 0,003 & 0,008 & 0,001 \\
+\hline
+\texttt{pequeno.txt} & $5 \times 5$   & 19 & 0,011 & 0,009 & 0,015 & 0,002 \\
+\hline
+\texttt{medio.txt}   & $8 \times 8$   & 53 & 0,022 & 0,018 & 0,029 & 0,003 \\
+\hline
+\texttt{exemplo.txt} & $10 \times 10$ & 47 & 0,038 & 0,034 & 0,045 & 0,004 \\
+\hline
+\end{tabularx}
+\end{table}
+
 \textbf{Discussão Teórica de Complexidade de Tempo e Espaço:}
 \begin{itemize}
-    \item \textbf{Complexidade de Tempo:} O algoritmo de \textit{backtracking} percorre uma árvore de decisões implícita. No pior caso teórico (um grafo em grade totalmente desprovido de paredes com o baú inalcançável), a partir de qualquer sala que não a inicial, o aventureiro possui até 3 direções não visitadas para escolher (já que a sala de onde veio está marcada como visitada). Sendo $V \le L \times C$ o total de salas livres, a complexidade assintótica no pior caso é de ordem exponencial $\mathcal{O}(3^V)$ ou $\mathcal{O}(4^{L \cdot C})$. Na prática, a presença de paredes físicas, o bloqueio precoce ao encontrar o baú sem chaves suficientes (poda por inviabilidade) e a marcação de visitados reduzem drasticamente o espaço de estados, conforme comprovado pelas podas registradas na Tabela~\ref{tab:resultados}. Contudo, para instâncias de grandes dimensões abertas com muitas chaves (como o arquivo \texttt{grande.txt} de $20 \times 20$), o tempo de resolução atinge o limite computacional viável em virtude da explosão combinatória.
-    \item \textbf{Complexidade de Espaço:} O consumo de memória do programa é dividido entre a estrutura estática do mapa e o espaço auxiliar. A representação da grade matricial requer $\mathcal{O}(L \times C)$ unidades de memória. Adicionalmente, a matriz de visitados consome $\mathcal{O}(L \times C)$. A pilha de execução da recursão armazena no máximo uma chamada por célula ao longo do caminho simples sem ciclos, implicando profundidade máxima limitada superiormente a $L \times C$. Portanto, a complexidade espacial total é estritamente linear em relação ao número de células: $\mathcal{O}(L \times C)$.
+    \item \textbf{Complexidade de Tempo:} O algoritmo de \textit{backtracking} percorre uma árvore de decisões implícita. No pior caso teórico (um grafo em grade totalmente desprovido de paredes com o baú inalcançável), a partir de qualquer sala que não a inicial, o aventureiro possui até 3 direções não visitadas para escolher (já que a sala de onde veio está marcada como visitada). Sendo $V \le L \times C$ o total de salas livres, a complexidade assintótica no pior caso é de ordem exponencial $\mathcal{O}(3^V)$ ou $\mathcal{O}(4^{L \cdot C})$. As rotinas de saída (\texttt{imprimir\_caminho} e \texttt{salvar\_caminho\_arquivo}) operam em tempo linear $\mathcal{O}(K)$ proporcional ao número de passos ($K \le L \times C$), e o benchmark executa em $\mathcal{O}(N \times T_{\text{busca}})$. Na prática, a presença de paredes físicas, o bloqueio precoce ao encontrar o baú sem chaves suficientes (poda por inviabilidade) e a marcação de visitados reduzem drasticamente o espaço de estados, conforme comprovado pelas podas registradas na Tabela~\ref{tab:resultados}. Contudo, para instâncias de grandes dimensões abertas com muitas chaves (como o arquivo \texttt{grande.txt} de $20 \times 20$), o tempo de resolução atinge o limite computacional viável em virtude da explosão combinatória.
+    \item \textbf{Complexidade de Espaço:} O consumo de memória do programa é dividido entre a estrutura estática do mapa e o espaço auxiliar. A representação da grade matricial requer $\mathcal{O}(L \times C)$ unidades de memória. Adicionalmente, a matriz de visitados consome $\mathcal{O}(L \times C)$. A pilha de execução da recursão armazena no máximo uma chamada por célula ao longo do caminho simples sem ciclos, implicando profundidade máxima limitada superiormente a $L \times C$. As rotinas de saída operam com espaço auxiliar $\mathcal{O}(1)$, e o benchmark aloca vetor estático de $N$ posições ($\mathcal{O}(N)$). Portanto, a complexidade espacial total do sistema é estritamente linear em relação ao número de células: $\mathcal{O}(L \times C)$.
 \end{itemize}
 
 % =========================================================================

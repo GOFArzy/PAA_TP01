@@ -14,19 +14,32 @@ static double obter_tempo_ms(void) {
     return ((double)clock() / CLOCKS_PER_SEC) * 1000.0;
 }
 
-static void executar_benchmark(const char *arquivo, int repeticoes) {
+typedef struct {
+    char arquivo[256];
+    int linhas;
+    int colunas;
+    int chaves;
+    int solucao;
+    int passos;
+    double media;
+    double min_t;
+    double max_t;
+    double desvio;
+} ResultadoBenchmark;
+
+static int executar_benchmark(const char *arquivo, int repeticoes, ResultadoBenchmark *res) {
     printf("\nArquivo: %s (%d repeticoes)\n", arquivo, repeticoes);
 
     Labirinto *lab = carregar_labirinto(arquivo);
     if (!lab) {
         fprintf(stderr, "Erro ao carregar '%s'.\n", arquivo);
-        return;
+        return 0;
     }
 
     double *tempos = (double *)malloc(repeticoes * sizeof(double));
     if (!tempos) {
         liberar_labirinto(lab);
-        return;
+        return 0;
     }
 
     int solucao = 0;
@@ -72,8 +85,49 @@ static void executar_benchmark(const char *arquivo, int repeticoes) {
     printf("Tempo maximo:  %.4f ms\n", max_t);
     printf("Desvio padrao: %.4f ms\n", desvio);
 
+    if (res) {
+        snprintf(res->arquivo, sizeof(res->arquivo), "%s", arquivo);
+        res->linhas = lab->linhas;
+        res->colunas = lab->colunas;
+        res->chaves = lab->chaves_necessarias;
+        res->solucao = solucao;
+        res->passos = passos;
+        res->media = media;
+        res->min_t = min_t;
+        res->max_t = max_t;
+        res->desvio = desvio;
+    }
+
     free(tempos);
     liberar_labirinto(lab);
+    return 1;
+}
+
+static void imprimir_tabela_comparativa(const ResultadoBenchmark *resultados, int total, int repeticoes) {
+    if (total <= 0) return;
+
+    printf("\n=================================================================================================================\n");
+    printf("                                   TABELA COMPARATIVA DE BENCHMARK (N = %d)\n", repeticoes);
+    printf("=================================================================================================================\n");
+    printf("%-24s %-11s %-8s %-9s %-8s %-16s %-12s %-12s %-12s\n",
+           "Instancia", "Dimensoes", "Chaves", "Solucao", "Passos", "Tempo Medio(ms)", "Min(ms)", "Max(ms)", "Desvio(ms)");
+    printf("-----------------------------------------------------------------------------------------------------------------\n");
+
+    for (int i = 0; i < total; i++) {
+        char dim[32];
+        snprintf(dim, sizeof(dim), "%dx%d", resultados[i].linhas, resultados[i].colunas);
+        printf("%-24s %-11s %-8d %-9s %-8d %-16.4f %-12.4f %-12.4f %-12.4f\n",
+               resultados[i].arquivo,
+               dim,
+               resultados[i].chaves,
+               resultados[i].solucao ? "Sim" : "Nao",
+               resultados[i].passos,
+               resultados[i].media,
+               resultados[i].min_t,
+               resultados[i].max_t,
+               resultados[i].desvio);
+    }
+    printf("=================================================================================================================\n\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -93,8 +147,21 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    ResultadoBenchmark *resultados = (ResultadoBenchmark *)malloc(qtd_arquivos * sizeof(ResultadoBenchmark));
+    int coletados = 0;
+
     for (int i = 1; i <= qtd_arquivos; i++) {
-        executar_benchmark(argv[i], repeticoes);
+        ResultadoBenchmark res;
+        if (executar_benchmark(argv[i], repeticoes, &res)) {
+            if (resultados) {
+                resultados[coletados++] = res;
+            }
+        }
+    }
+
+    if (resultados) {
+        imprimir_tabela_comparativa(resultados, coletados, repeticoes);
+        free(resultados);
     }
 
     return 0;
