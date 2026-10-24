@@ -23,7 +23,22 @@
 \usepackage{caption}
 \usepackage{tabularx}
 \usepackage{array}
+\usepackage{float}
 \usepackage{hyperref}
+\usepackage[htt]{hyphenat}
+\usepackage{microtype}
+
+% Permite quebra suave de linha em identificadores com sublinhado em texto e \texttt
+\renewcommand{\_}{\textunderscore\allowbreak}
+
+% Otimizacao do posicionamento de figuras para evitar paginas vazias
+\renewcommand{\topfraction}{0.85}
+\renewcommand{\bottomfraction}{0.85}
+\renewcommand{\textfraction}{0.15}
+\renewcommand{\floatpagefraction}{0.70}
+
+\raggedbottom % Impede o esticamento vertical de paginas evitando grandes vazios brancos
+\sloppy       % Evita estouro de palavras longas e codigo na margem direita
 
 % --- Configuração de Cabeçalho e Rodapé (Número da página no canto inferior direito) ---
 \pagestyle{fancy}
@@ -167,7 +182,7 @@ O labirinto bidimensional impõe restrições essenciais ao aventureiro:
     \item Paredes intransponíveis não podem ser atravessadas.
 \end{itemize}
 
-Algumas bibliotecas padrão da linguagem C (C99 nativa) foram utilizadas para o programa, elas são “stdio.h”, “stdlib.h”, “string.h”, “time.h” e “unistd.h”. “time.h” foi utilizada para capturar o tempo de máquina e calcular a duração exata das execuções para o benchmark, “stdlib.h” foi utilizada para gerenciamento dinâmico de memória e números aleatórios no gerador de labirintos, “stdio.h” para leitura e escrita de arquivos formatados, “string.h” para manipulação de cadeias de caracteres e argumentos de CLI, e “unistd.h” para o controle de temporização da animação no terminal. O programa foi estruturado em módulos independentes em C, separando o algoritmo de busca, as regras de navegação, a interface de usuário e a infraestrutura de medição de desempenho.
+Foram utilizadas as bibliotecas padrão da linguagem C: “stdio.h”, “stdlib.h”, “string.h”, “time.h” e “unistd.h”. A biblioteca “time.h” foi utilizada para calcular a duração das execuções no benchmark, “stdlib.h” para gerenciamento de memória e números aleatórios no gerador, “stdio.h” para entrada e saída de arquivos, “string.h” para argumentos de linha de comando, e “unistd.h” para o controle de temporização da animação no terminal. O programa foi estruturado em módulos independentes, separando o algoritmo de busca, as regras de navegação, a interface de usuário e a infraestrutura de medição de desempenho.
 
 % =========================================================================
 % 2. ORGANIZAÇÃO (Idêntico à Página 3 e 4 do modelo)
@@ -211,9 +226,9 @@ O módulo do mapa é responsável pelo gerenciamento estrutural dos dados do lab
 
 No cabeçalho \texttt{mapa.h} foram concebidas as estruturas de dados fundamentais:
 \begin{itemize}
-    \item \texttt{TipoCelula}: tipo enumerado que classifica semanticamente cada posição da grade (\texttt{SALA\_VAZIA=0}, \texttt{PAREDE=1}, \texttt{CHAVE=2}, \texttt{BAU=3}, \texttt{AVENTUREIRO=4}), conferindo clareza e segurança de tipo;
-    \item \texttt{Labirinto}: estrutura principal contendo as dimensões (\texttt{linhas}, \texttt{colunas}), o total de chaves requeridas (\texttt{chaves\_necessarias}), as coordenadas pré-indexadas de início (\texttt{inicio\_lin}, \texttt{inicio\_col}) e do baú (\texttt{bau\_lin}, \texttt{bau\_col}), e o ponteiro duplo para a matriz de células (\texttt{TipoCelula **grade});
-    \item \texttt{Posicao} e \texttt{Caminho}: vetor dinâmico de coordenadas que registra a trajetória percorrida pelo aventureiro. A capacidade é expandida geometricamente via \texttt{realloc} sob demanda, garantindo custo amortizado $\mathcal{O}(1)$ por inserção.
+    \item \texttt{TipoCelula}: tipo enumerado que define semanticamente cada sala da matriz (\texttt{SALA\_VAZIA}, \texttt{PAREDE}, \texttt{CHAVE}, \texttt{BAU} e \texttt{AVENTUREIRO}), propiciando clareza semântica e segurança de tipos;
+    \item \texttt{Labirinto}: registro principal que agrega as dimensões da grade (linhas e colunas), o total de chaves requeridas, os pontos de partida e do baú pré-indexados, além do ponteiro duplo para a matriz (\texttt{TipoCelula **grade});
+    \item \texttt{Posicao} e \texttt{Caminho}: estrutura dinâmica de coordenadas para registro do trajeto. Sua capacidade expande geometricamente via \texttt{realloc}, assegurando custo amortizado $\mathcal{O}(1)$ por inserção.
 \end{itemize}
 
 \textbf{“carregar\_labirinto”}: Abre o arquivo texto, lê e valida as dimensões e o total de chaves com \texttt{fscanf}, aloca a matriz bidimensional e mapeia os tokens para \texttt{TipoCelula}. Valida a existência de exatamente um ponto de partida \texttt{A} e um baú \texttt{X}. Caso ocorra qualquer erro de alocação ou dados corrompidos, a função realiza a desalocação em cascata de todas as linhas alocadas anteriormente antes de retornar \texttt{NULL}, garantindo falha segura.
@@ -224,41 +239,57 @@ A alocação matricial na \textit{Heap} e a hierarquia de ponteiros do labirinto
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.75\textwidth]{prints/diagrama_memoria.png}
-    \vspace{0.2cm}
+    \includegraphics[width=0.58\textwidth]{prints/diagrama_memoria.png}
+    \vspace{0.15cm}
     \caption{Diagrama esquemático da alocação de memória do Labirinto na Heap}
     \label{fig:diagrama_memoria}
 \end{figure}
 
-\textbf{Gerador de Mapas Solúveis (gerador.c — Extra 1):} Para atender ao \textbf{Extra 1}, foi desenvolvido o programa independente \texttt{gerador.c} em 100\% C nativo (C99). Sorteios puramente aleatórios de células com probabilidade estática frequentemente geram labirintos desconexos ou com chaves isoladas por paredes, tornando-os insolúveis. Para contornar esse problema e viabilizar testes rigorosos, o gerador adota uma abordagem construtiva garantida:
+\subsubsection*{Gerador de Mapas Solúveis (gerador.c — Extra 1)}
+
+Para atender ao \textbf{Extra 1}, foi desenvolvido o programa independente \texttt{gerador.c}. Sorteios puramente aleatórios de células com probabilidade estática frequentemente geram labirintos desconexos ou com chaves isoladas por paredes, tornando-os insolúveis. Para contornar esse problema e viabilizar testes rigorosos, o gerador adota uma abordagem construtiva garantida:
 \begin{enumerate}
-    \item \textbf{Caminho Garantido via DFS Randomizada}: A partir de $A$ em $(0,0)$, executa-se uma Busca em Profundidade com embaralhamento uniforme das 4 direções via algoritmo de Fisher-Yates, traçando uma rota sinuosa e sem repetições até o baú em $(linhas-1, colunas-1)$, conforme ilustrado na Figura~\ref{fig:dfs_gerador};
+    \item \textbf{Caminho Garantido via DFS Randomizada}: A partir de $A$ em $(0,0)$, executa-se uma Busca em Profundidade traçando uma rota sinuosa e sem repetições até o baú em $(linhas-1, colunas-1)$. Caso a busca sempre tentasse as direções na mesma ordem fixa (ex.: sempre Cima antes de Baixo), todos os mapas gerados teriam trajetórias repetitivas e com o mesmo padrão geométrico. Para garantir caminhos orgânicos e imprevisíveis a cada geração, a função auxiliar \texttt{embaralhar} aplica a permutação de Fisher-Yates, que sorteia uniformemente a ordem das 4 direções a cada passo da busca, conforme ilustrado na Figura~\ref{fig:dfs_gerador};
     \item \textbf{Distribuição Protegida das Chaves}: As células do caminho encontrado são marcadas em uma máscara de proteção. As chaves exigidas são sorteadas exclusivamente entre as posições intermediárias dessa rota garantida, assegurando matematicamente que o aventureiro poderá alcançá-las;
     \item \textbf{Inserção de Paredes}: As células externas ao caminho protegido recebem paredes com probabilidade parametrizável (padrão de 35\%), preservando a existência de ao menos uma solução viável.
 \end{enumerate}
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.85\textwidth]{prints/dfs_gerador.png}
-    \vspace{0.2cm}
-    \caption{Implementação da DFS randomizada com Fisher-Yates no gerador de labirintos}
+    \includegraphics[width=0.70\textwidth]{prints/dfs_gerador.png}
+    \vspace{0.15cm}
+    \caption{Implementação do embaralhamento de direções com Fisher-Yates no gerador}
     \label{fig:dfs_gerador}
 \end{figure}
 
-O gerador é invocado via linha de comando recebendo parâmetros via \texttt{argc/argv} (\texttt{./bin/gerador <linhas> <colunas> <num\_chaves> <saida.txt> [seed] [prob\_paredes]}). O suporte a semente (\texttt{seed}) permite reproduzir os mesmos cenários para fins de comparação empírica no \textit{benchmark}. A compilação sem avisos e a execução do gerador no terminal são demonstradas na Figura~\ref{fig:terminal_gerador}:
+O gerador é invocado via linha de comando recebendo os parâmetros de dimensão e regras:
+\begin{center}
+\small
+\texttt{./bin/gerador <linhas> <colunas> <num\_chaves> <saida.txt> [seed] [prob]}
+\end{center}
+O suporte a semente (\texttt{seed}) permite reproduzir os mesmos cenários para fins de comparação empírica no \textit{benchmark}. A compilação e a execução do gerador no terminal são demonstradas na Figura~\ref{fig:terminal_gerador}:
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.85\textwidth]{prints/terminal_compilacao.png}
-    \vspace{0.2cm}
+    \includegraphics[width=0.70\textwidth]{prints/terminal_compilacao.png}
+    \vspace{0.15cm}
     \caption{Compilação sem advertências e execução do gerador via linha de comando}
     \label{fig:terminal_gerador}
 \end{figure}
 
 \subsection{“backtracking.c” e “backtracking.h”}
-Nestes arquivos foi desenvolvido o núcleo algorítmico do trabalho: um motor de busca em profundidade com retrocesso sistemático (\textit{backtracking}) e podas por inviabilidade. O módulo oferece suporte aos modos de resolução única, modo toroidal (\texttt{--globo}), busca exaustiva de todos os caminhos (\texttt{--todos}) e instrumentação analítica (\texttt{--analise}).
+Nestes arquivos foi desenvolvido o núcleo algorítmico do trabalho: um motor de busca em profundidade com retrocesso sistemático (\textit{backtracking}) e podas por inviabilidade. O algoritmo atua como integrador dos módulos descritos anteriormente: consome a matriz e o vetor dinâmico de coordenadas de \texttt{mapa.h}, delega a validação geométrica de passos a \texttt{navegacao.h} e registra métricas na estrutura de \texttt{analise.h}.
 
-A função \textbf{“resolver\_labirinto\_completo”} atua como fachada para a preparação do estado inicial: aloca dinamicamente a matriz de controle de salas visitadas (\texttt{visitado}), zera a lista de passos e invoca a função recursiva \textbf{“backtrack\_recursivo”}.
+A função de entrada \textbf{“resolver\_labirinto\_completo”} prepara o ambiente antes de iniciar a exploração:
+\begin{enumerate}
+    \item Aloca dinamicamente a matriz bidimensional de visitados (\texttt{visitado}) utilizando a função utilitária \texttt{alocar\_matriz\_int} de \texttt{mapa.c};
+    \item Inicializa a estrutura de caminho temporário (\texttt{caminho\_init});
+    \item Caso a flag \texttt{--analise} esteja ativa, dispara \texttt{analise\_iniciar} para zerar contadores de chamadas, podas e profundidade;
+    \item Invoca a rotina recursiva \textbf{“backtrack\_recursivo”} a partir da coordenada inicial do aventureiro (\texttt{inicio\_lin}, \texttt{inicio\_col}), com contagem inicial de 0 chaves e profundidade 1;
+    \item Ao término da busca, desaloca a matriz de visitados (\texttt{liberar\_matriz\_int}) e o caminho temporário, garantindo ausência de vazamentos de memória.
+\end{enumerate}
+
+Para cada célula navegada, a função recursiva delega o cálculo das coordenadas vizinhas e a checagem de barreiras às funções \texttt{proxima\_posicao} no modo padrão, ou \texttt{proxima\_posicao\_globo} caso a navegação toroidal esteja ativa. Caso o movimento seja inválido (ao atingir uma parede ou uma célula já visitada), o algoritmo computa uma poda (\texttt{analise\_registrar\_poda}) e não aprofunda a chamada.
 
 \begin{lstlisting}[language=C, caption={Trecho central de exploração recursiva e gestão de chaves no backtracking.}]
 /* Fazer a escolha: visitar a celula */
@@ -288,17 +319,42 @@ if (lab->grade[lin][col] == BAU) {
 \textbf{Decisões de Implementação e Dificuldades Superadas:}
 \begin{enumerate}
     \item \textbf{Gestão Reversível do Contador de Chaves:} Um dos desafios críticos em problemas combinatórios reside em garantir a integridade do estado ao retroceder na árvore de busca. Caso uma sala visitada contenha uma chave (\texttt{CHAVE}), o contador é incrementado e a variável local \texttt{pegou\_chave} é assinalada como verdadeira. Ao término da exploração de todas as ramificações filhas, se a busca precisar retroceder (\textit{backtrack}), a condição \texttt{if (pegou\_chave) chaves\_coletadas--;} desfaz a alteração, garantindo que nenhum caminho alternativo herde chaves coletadas em ramos descartados.
-    \item \textbf{Poda por Inviabilidade Futura na Câmara do Baú:} Como as diretrizes do labirinto proíbem estritamente revisitar qualquer sala (ausência de ciclos), caso o aventureiro ingresse na sala do baú (\texttt{BAU}) sem ter em mãos todas as chaves exigidas, essa rota torna-se matematicamente inviável. Uma vez marcada a câmara do baú como visitada, o personagem jamais poderia retornar a ela após encontrar as chaves restantes. Reconhecendo essa restrição, o algoritmo não trata o baú como sala de passagem: ele realiza uma poda imediata (\textit{pruning}), desmarcando a sala e retrocedendo, o que evita a exploração desnecessária de subárvores inteiras.
-    \item \textbf{Cópia Profunda de Múltiplos Caminhos (Extra 2):} Para a funcionalidade \texttt{--todos}, o caminho corrente é constantemente mutável ao longo dos retrocessos. Para preservar cada rota bem-sucedida, utilizou-se a estrutura dinâmica \texttt{ListaCaminhos} combinada à função \texttt{caminho\_copiar}, duplicando os vetores de coordenadas em novos blocos de memória independentes.
+    \item \textbf{Poda por Inviabilidade Futura no Baú e Ganho de Complexidade:} O regulamento proíbe estritamente passar pela mesma sala mais de uma vez (ausência de ciclos). Logo, caso o aventureiro ingresse na sala do baú (\texttt{BAU}) sem todas as chaves, essa rota torna-se matematicamente sem saída: se continuasse explorando a partir dali, o baú ficaria bloqueado como visitado e o aventureiro jamais conseguiria retornar a ele para destrancá-lo. Em vez de gastar recursão desnecessária, o algoritmo realiza uma **poda imediata** (\textit{pruning}) retornando falha. Essa decisão corta na raiz subárvores de profundidade que poderiam alcançar até $L \times C$ passos, reduzindo o fator de ramificação efetivo da busca e diminuindo drasticamente a quantidade de chamadas recursivas e o tempo prático de resolução.
+    \item \textbf{Busca Exaustiva e Cópia Profunda de Múltiplos Caminhos (Extra 2):} No modo padrão, a exploração encerra-se na primeira rota válida encontrada. O \textbf{Extra 2} (\texttt{--todos}) introduz a busca exaustiva por todas as soluções possíveis. Como o vetor dinâmico de coordenadas (\texttt{caminho\_atual}) sofre sucessivos retrocessos (via rotina \texttt{caminho\_remover\_ultimo}) para testar alternativas distintas, salvar apenas ponteiros faria com que todas as rotas armazenadas ficassem corrompidas ou vazias no final. Para contornar essa restrição da linguagem C, implementou-se a função \texttt{caminho\_copiar}, que realiza uma cópia profunda (\textit{deep copy}): aloca um novo bloco na memória \textit{Heap} e duplica todas as coordenadas da rota encontrada. Esse trajeto clonado é armazenado na estrutura dinâmica \texttt{ListaCaminhos}, que expande sua capacidade geometricamente sob demanda. Após registrar a solução, o algoritmo desmarca a sala e força o retrocesso programado para continuar explorando o labirinto até esgotar todas as combinações viáveis, permitindo ao final relatar o total de rotas e imprimi-las individualmente.
 \end{enumerate}
 
 \subsection{“navegacao.c” e “cli.c”}
 
-O desenvolvimento deste módulo teve como objetivo central desacoplar totalmente as regras de transição física do aventureiro sobre o labirinto e o tratamento dos argumentos de linha de comando em relação ao motor de busca por \textit{backtracking}. Essa divisão permitiu que os demais membros do grupo integrassem o algoritmo de busca recursiva, as métricas e a interface visual sem necessidade de manipular diretamente detalhes geométricos ou convenções de entrada do sistema operacional.
+Este módulo é responsável por isolar duas tarefas essenciais do projeto: o controle das regras de movimentação física do aventureiro sobre a grade e a interpretação dos comandos passados pelo usuário no terminal.
 
-A estrutura de dados \texttt{Opcoes} atua como o ponto de unificação das configurações do programa, armazenando o arquivo de entrada e as flags binárias ativadas pelo usuário:
+\subsubsection*{1. Regras de Movimentação e Modo Globo (navegacao.c)}
 
-\begin{lstlisting}[language=C, caption={Estrutura de dados Opcoes para parametrização via linha de comando.}]
+O aventureiro só pode se deslocar nas quatro direções cardeais ortogonais (Cima, Baixo, Esquerda e Direita). Para simplificar o laço de repetição do \textit{backtracking} e evitar estruturas condicionais repetitivas, as transições foram organizadas em dois vetores estáticos constantes:
+\begin{lstlisting}[language=C, caption={Vetores de deslocamento ortogonal em O(1).}]
+const int DIRECOES_LIN[NUM_DIRECOES] = {-1,  1,  0,  0};
+const int DIRECOES_COL[NUM_DIRECOES] = { 0,  0, -1,  1};
+\end{lstlisting}
+
+A função \textbf{“movimento\_valido”} verifica se a próxima sala pode ser acessada, aplicando as restrições obrigatórias:
+\begin{enumerate}
+    \item Estar dentro das dimensões da grade ($0 \le lin < linhas$ e $0 \le col < colunas$);
+    \item Não ser uma parede intransponível (\texttt{grade[lin][col] != PAREDE});
+    \item Não ter sido visitada no caminho atual (\texttt{visitado[lin][col] == 0}).
+\end{enumerate}
+
+\textbf{Ordem das validações:} A checagem de limites é feita antes do acesso à matriz de células. Graças à avaliação em curto-circuito da linguagem C, se a coordenada estiver fora do mapa, a função retorna zero imediatamente sem acessar posições de memória ilegais, evitando erros de segmentação (\textit{segmentation fault}).
+
+Para o \textbf{Modo Globo (Extra 3)}, o mapa funciona de forma toroidal (semelhante ao clássico jogo da cobrinha): ao ultrapassar uma borda, o personagem reaparece no lado oposto do labirinto. Essa transição circular é calculada diretamente com o operador de resto da divisão:
+\begin{lstlisting}[language=C, caption={Cálculo da próxima posição com conexão toroidal das bordas.}]
+*prox_lin = (lin + DIRECOES_LIN[d] + lab->linhas)  % lab->linhas;
+*prox_col = (col + DIRECOES_COL[d] + lab->colunas) % lab->colunas;
+\end{lstlisting}
+Somar o total de linhas e colunas antes da operação de resto é fundamental para garantir que coordenadas negativas (como tentar subir a partir da linha 0) não gerem números negativos em C, resultando sempre no índice correto da borda oposta.
+
+\subsubsection*{2. Interface de Linha de Comando (cli.c)}
+
+O módulo de CLI permite ao usuário configurar a execução através de flags no terminal sem alterar o código. Todas as opções são concentradas na estrutura \texttt{Opcoes}:
+\begin{lstlisting}[language=C, caption={Estrutura de dados Opcoes para controle de parâmetros e flags.}]
 typedef struct {
     const char *arquivo_entrada; /* Caminho do arquivo .txt do labirinto */
     int modo_globo;              /* 1: movimentacao toroidal (--globo) */
@@ -308,58 +364,7 @@ typedef struct {
 } Opcoes;
 \end{lstlisting}
 
-A função \textbf{“cli\_parse”} é responsável por iterar sequencialmente sobre o vetor \texttt{argv} a partir do índice 1. Argumentos com o prefixo \texttt{--} são mapeados para suas respectivas variáveis na estrutura \texttt{Opcoes}. O primeiro argumento posicional sem prefixo é capturado como o caminho do arquivo do labirinto. Como medida de robustez, o grupo optou por tolerar opções desconhecidas emitindo um aviso amigável em \texttt{stderr} sem abortar a execução imediatamente. Caso nenhum arquivo de entrada seja fornecido, a função \textbf{“cli\_usage”} é acionada automaticamente para imprimir no console a sintaxe correta de invocação e os parâmetros aceitos, retornando código 0 para encerrar o programa de forma segura.
-
-Para a movimentação do aventureiro, foram estabelecidos dois modos operacionais: o modo euclidiano padrão e o modo toroidal (\textit{Modo Globo}). A fim de evitar encadeamentos repetitivos de estruturas condicionais (\texttt{if/else}) durante as milhões de chamadas recursivas do \textit{backtracking}, os deslocamentos cardeais foram mapeados em vetores bidimensionais estáticos de complexidade $O(1)$:
-
-\begin{lstlisting}[language=C, caption={Vetores constantes para deslocamento ortogonal (Cima, Baixo, Esquerda, Direita).}]
-const int DIRECOES_LIN[NUM_DIRECOES] = {-1,  1,  0,  0};
-const int DIRECOES_COL[NUM_DIRECOES] = { 0,  0, -1,  1};
-\end{lstlisting}
-
-A função \textbf{“movimento\_valido”} avalia se a célula candidata $(lin, col)$ atende rigorosamente às três restrições fundamentais do problema:
-\begin{enumerate}
-    \item Estar contida nos limites dimensionais da matriz ($0 \le lin < \text{linhas}$ e $0 \le col < \text{colunas}$);
-    \item Não constituir uma barreira física intransponível (\texttt{grade[lin][col] != PAREDE});
-    \item Não ter sido visitada no ramo de busca corrente (\texttt{visitado[lin][col] == 0}).
-\end{enumerate}
-
-\begin{lstlisting}[language=C, caption={Validação de coordenadas no modo padrão com avaliação em curto-circuito.}]
-int movimento_valido(const Labirinto *lab, int **visitado, int lin, int col) {
-    if (lin < 0 || lin >= lab->linhas)  return 0;
-    if (col < 0 || col >= lab->colunas) return 0;
-    if (lab->grade[lin][col] == PAREDE) return 0;
-    if (visitado[lin][col]) return 0;
-    return 1;
-}
-\end{lstlisting}
-
-\textbf{Decisão de Implementação:} A checagem dos limites precede estritamente o acesso à matriz de células. Pelo mecanismo de curto-circuito das expressões lógicas em C (\textit{short-circuit evaluation}), caso os índices sejam negativos ou ultrapassem as dimensões alocadas, a função encerra imediatamente retornando 0 antes de desreferenciar a memória, prevenindo falhas de segmentação (\textit{segmentation fault}) e comportamentos indefinidos.
-
-A função \textbf{“proxima\_posicao”} calcula a nova posição somando o vetor de deslocamento e delega sua viabilidade diretamente a \textbf{“movimento\_valido”}.
-
-Para o \textbf{Modo Globo}, o mapa deixa de ter bordas bloqueantes e passa a se comportar como uma superfície toroidal contínua, onde transpor a borda leste faz o personagem reaparecer na margem oeste, e transpor a borda sul o faz ressurgir na borda norte. A transição foi modelada matematicamente pela congruência modular:
-\begin{align}
-    lin' &= (lin + \Delta_{lin} + L) \pmod L \\
-    col' &= (col + \Delta_{col} + C) \pmod C
-\end{align}
-
-\begin{lstlisting}[language=C, caption={Cálculo toroidal em O(1) e validação de células no Modo Globo.}]
-int proxima_posicao_globo(const Labirinto *lab, int **visitado, int lin,
-                          int col, int d, int *prox_lin, int *prox_col) {
-    *prox_lin = (lin + DIRECOES_LIN[d] + lab->linhas)  % lab->linhas;
-    *prox_col = (col + DIRECOES_COL[d] + lab->colunas) % lab->colunas;
-    return movimento_valido_globo(lab, visitado, *prox_lin, *prox_col);
-}
-
-int movimento_valido_globo(const Labirinto *lab, int **visitado, int lin, int col) {
-    if (lab->grade[lin][col] == PAREDE) return 0;
-    if (visitado[lin][col]) return 0;
-    return 1;
-}
-\end{lstlisting}
-
-\textbf{Fundamentação Algébrica:} No padrão C99 (ISO/IEC 9899 §6.5.5), o operador binário \texttt{\%} opera com truncamento em direção a zero, preservando o sinal algébrico negativo caso o dividendo seja negativo (por exemplo, \texttt{-1 \% 10 == -1}). A adição da dimensão total ($L$ e $C$) antes da aplicação do resto garante um valor estritamente não-negativo sem alterar a classe de congruência. Uma vez normalizadas as coordenadas no intervalo $[0, L-1]$ e $[0, C-1]$, a função \textbf{“movimento\_valido\_globo”} dispensa o teste de fronteiras externas, limitando-se a checar paredes e células já visitadas.
+A função \textbf{“cli\_parse”} varre os argumentos do terminal (\texttt{argv}): argumentos iniciados por \texttt{--} ativam as flags correspondentes, enquanto o argumento sem prefixo é identificado como o arquivo de entrada. Se nenhum arquivo for informado, o programa exibe automaticamente as instruções de uso (\textbf{“cli\_usage”}) com todos os comandos aceitos e encerra a execução de forma segura.
 
 \subsection{“analise.c” e “visualizador.c”}
 Nestes arquivos foi implementada a instrumentação de desempenho computacional e a interface visual interativa em terminal:
@@ -413,8 +418,8 @@ Ao fornecer um labirinto válido juntamente com a opção \texttt{--analise}, o 
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.88\textwidth]{prints/terminal_analise.png}
-    \vspace{0.2cm}
+    \includegraphics[width=0.64\textwidth]{prints/terminal_analise.png}
+    \vspace{0.15cm}
     \caption{Resolução do labirinto oficial (\texttt{exemplo.txt}) com métricas do Modo Análise}
     \label{fig:execucao_padrao}
 \end{figure}
@@ -425,8 +430,8 @@ A ativação da flag \texttt{--globo} permite encontrar soluções em cenários 
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.85\textwidth]{prints/terminal_globo.png}
-    \vspace{0.2cm}
+    \includegraphics[width=0.64\textwidth]{prints/terminal_globo.png}
+    \vspace{0.15cm}
     \caption{Execução do algoritmo com movimentação toroidal (\texttt{--globo})}
     \label{fig:execucao_globo}
 \end{figure}
@@ -437,8 +442,8 @@ O modo interativo (\texttt{--visual}) utiliza sequências de escape ANSI para co
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.75\textwidth]{prints/terminal_visual.png}
-    \vspace{0.2cm}
+    \includegraphics[width=0.55\textwidth]{prints/terminal_visual.png}
+    \vspace{0.15cm}
     \caption{Renderização visual colorida no terminal com sequências de escape ANSI}
     \label{fig:execucao_visual}
 \end{figure}
@@ -449,8 +454,8 @@ Para avaliar quantitativamente a eficiência computacional do sistema, foram con
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\textwidth]{prints/terminal_benchmark.png}
-    \vspace{0.2cm}
+    \includegraphics[width=0.68\textwidth]{prints/terminal_benchmark.png}
+    \vspace{0.15cm}
     \caption{Saída da suíte de testes com a Tabela Comparativa de Benchmark}
     \label{fig:terminal_benchmark}
 \end{figure}
