@@ -1,0 +1,354 @@
+\documentclass[12pt,a4paper]{article}
+ 
+% --- Pacotes essenciais de formatação (mesmos do TP1) ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{mathptmx}
+\usepackage[left=3.0cm, top=3.0cm, right=2.0cm, bottom=2.0cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+ 
+\usepackage{indentfirst}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+ 
+\usepackage{graphicx}
+\graphicspath{{prints/}}
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage[htt]{hyphenat}
+\usepackage{microtype}
+ 
+\renewcommand{\_}{\textunderscore\allowbreak}
+ 
+\renewcommand{\topfraction}{0.85}
+\renewcommand{\bottomfraction}{0.85}
+\renewcommand{\textfraction}{0.15}
+\renewcommand{\floatpagefraction}{0.70}
+ 
+\raggedbottom
+\sloppy
+ 
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[R]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+ 
+\titleformat{\section}
+  {\normalfont\bfseries\normalsize}
+  {\thesection.}
+  {0.5em}
+  {}
+\titleformat{\subsection}
+  {\normalfont\bfseries\normalsize}
+  {\thesubsection}
+  {0.5em}
+  {}
+\titleformat{\subsubsection}
+  {\normalfont\bfseries\normalsize}
+  {\thesubsubsection}
+  {0.5em}
+  {}
+ 
+\titlespacing*{\section}{0pt}{1.5ex plus 0.5ex minus 0.2ex}{0.8ex plus 0.2ex}
+\titlespacing*{\subsection}{0pt}{1.2ex plus 0.4ex minus 0.2ex}{0.6ex plus 0.2ex}
+\titlespacing*{\subsubsection}{0pt}{1.0ex plus 0.3ex minus 0.2ex}{0.5ex plus 0.2ex}
+ 
+\DeclareCaptionLabelSeparator{hifen}{-- }
+\captionsetup[figure]{
+    name=Figura,
+    labelsep=hifen,
+    justification=centering,
+    font=bf,
+    labelfont=bf
+}
+ 
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    citecolor=blue,
+    urlcolor=blue
+}
+ 
+\definecolor{codegreen}{rgb}{0,0.5,0}
+\definecolor{codegray}{rgb}{0.45,0.45,0.45}
+\definecolor{codepurple}{rgb}{0.55,0,0.75}
+\definecolor{backcolour}{rgb}{0.98,0.98,0.98}
+ 
+\lstdefinestyle{estiloc}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen}\itshape,
+    keywordstyle=\color{blue}\bfseries,
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=6pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    frame=single,
+    rulecolor=\color{black!25}
+}
+\lstset{style=estiloc}
+ 
+\begin{document}
+ 
+% =========================================================================
+% CAPA
+% =========================================================================
+\thispagestyle{empty}
+\begin{center}
+    {\fontsize{38}{42}\selectfont \textbf{\textsf{\textcolor[RGB]{25,25,25}{U}\hspace{1pt}\textcolor[RGB]{150,20,20}{F}\hspace{1pt}\textcolor[RGB]{200,140,20}{V}}}}\\[0.25cm]
+    {\normalsize SERVIÇO PÚBLICO FEDERAL $\cdot$ MINISTÉRIO DA EDUCAÇÃO}\\[0.12cm]
+    {\normalsize UNIVERSIDADE FEDERAL DE VIÇOSA $\cdot$ UFV}\\[0.12cm]
+    {\normalsize CAMPUS FLORESTAL}\\[4.8cm]
+ 
+    {\large \textbf{Trabalho 2 - PAA}}\\[0.3cm]
+    {\large \textbf{Escape da Caverna com Programação Dinâmica}}\\[0.3cm]
+    
+ 
+    \begin{flushright}
+        Gabriel Marcus de Oliveira Felix --- Matrícula: 5792 \\
+        Otávio Soares Pedroso --- Matrícula: 6593 \\
+        Pedro Mendes Gonzaga --- Matrícula: 6563 \\
+        Rafaella Ferreira Pinheiro Silva --- Matrícula: 5363 \\
+        Tomás Viana Resende --- Matrícula: 6556
+    \end{flushright}
+ 
+    \vfill
+    {\normalsize Florestal - MG}\\[0.12cm]
+    {\normalsize 2026}
+\end{center}
+ 
+\newpage
+\setcounter{page}{2}
+ 
+% =========================================================================
+% Leitura e representação da caverna
+% =========================================================================
+ 
+\section{Desenvolvimento}
+ 
+\subsection{“mapa.c” e “mapa.h”}
+ 
+O módulo do mapa é responsável por abrir o arquivo de entrada, validar seu conteúdo, armazenar a caverna em memória e liberar essa memória ao final. Foi utilizado “stdio.h” para a leitura do arquivo, “stdlib.h” para a alocação dinâmica e a conversão de números, “string.h” para a comparação dos símbolos \texttt{I} e \texttt{F}, “limits.h” para validar o intervalo dos inteiros lidos e “errno.h” para detectar estouro na conversão. Os arquivos do módulo são \texttt{include/mapa.h} (interface), \texttt{src/mapa.c} (implementação) e \texttt{testes/teste\_mapa.c} (programa de teste).
+ 
+\subsubsection*{Formato do arquivo de entrada}
+ 
+A primeira linha do arquivo contém três inteiros separados por espaço: o número de linhas $L$, o número de colunas $C$ e os Pontos de Vida iniciais do estudante. As $L$ linhas seguintes contêm, cada uma, $C$ células separadas por espaço. Cada célula é um inteiro, que representa a variação nos Pontos de Vida ao passar por ela (negativo para monstros, positivo para poções e zero para células vazias), a letra \texttt{I} (posição inicial) ou a letra \texttt{F} (saída). O exemplo do enunciado, \texttt{Caverna1.txt}, é:
+ 
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \ttfamily\small
+        \begin{tabular}{|l|}
+        \hline
+        4 5 40 \\
+        -20 0 -20 0 0 \\
+        F -10 -10 -10 -10 \\
+        -20 0 0 0 +20 \\
+        0 0 -10 0 I \\
+        \hline
+        \end{tabular}
+    \end{minipage}
+    \vspace{0.2cm}
+    \caption{Arquivo de entrada \texttt{Caverna1.txt}}
+\end{figure}
+ 
+Esse mapa tem 4 linhas, 5 colunas e 40 Pontos de Vida iniciais, com o estudante em (3,4) e a saída em (1,0). As coordenadas começam em zero, com a linha como primeira coordenada ($x$) e a coluna como segunda ($y$), seguindo o enunciado. Valores com sinal explícito, como \texttt{+20}, são aceitos.
+ 
+\subsubsection*{Estruturas de dados}
+ 
+No cabeçalho \texttt{mapa.h} foi definida a estrutura principal do módulo:
+ 
+\begin{lstlisting}[language=C, caption={Estrutura Mapa, que representa a caverna em memória.}]
+typedef struct {
+    int linhas, colunas;
+    int hp_inicial;
+    int **valor;                        /* efeito de cada celula */
+    int inicio_linha, inicio_coluna;    /* posicao de I */
+    int fim_linha, fim_coluna;          /* posicao de F */
+} Mapa;
+\end{lstlisting}
+ 
+\begin{itemize}
+    \item \texttt{linhas}, \texttt{colunas} e \texttt{hp\_inicial}: armazenam a primeira linha do arquivo;
+    \item \texttt{valor}: matriz $L \times C$ alocada dinamicamente na \textit{Heap}, em que \texttt{valor[i][j]} é a variação de Pontos de Vida da célula $(i,j)$. Nas células \texttt{I} e \texttt{F} o valor armazenado é 0, pois elas não alteram os Pontos de Vida;
+    \item \texttt{inicio\_linha}, \texttt{inicio\_coluna}, \texttt{fim\_linha} e \texttt{fim\_coluna}: posições de \texttt{I} e \texttt{F}, registradas durante a leitura para que não seja necessário percorrer a matriz à procura delas.
+\end{itemize}
+ 
+O cabeçalho também define os códigos de retorno da leitura, que permitem ao chamador distinguir o tipo de falha:
+ 
+\begin{table}[htbp]
+\centering
+\small
+\caption{Códigos de retorno da função \texttt{mapa\_ler}.}
+\label{tab:codigos}
+\vspace{0.2cm}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{4.2cm}|c|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{Constante} & \textbf{Valor} & \textbf{Significado} \\
+\hline
+\texttt{MAPA\_OK} & 0 & Leitura bem-sucedida \\
+\hline
+\texttt{MAPA\_ERRO\_ARQUIVO} & $-1$ & Arquivo inexistente ou ilegível \\
+\hline
+\texttt{MAPA\_ERRO\_MEMORIA} & $-2$ & Falha de alocação de memória \\
+\hline
+\texttt{MAPA\_ERRO\_FORMATO} & $-3$ & Dimensões inválidas, token inválido, células faltando, ou \texttt{I}/\texttt{F} ausente ou repetido \\
+\hline
+\end{tabularx}
+\end{table}
+ 
+\textbf{“mapa\_ler”}: Abre o arquivo e lê a primeira linha, validando que as dimensões são positivas. Em seguida aloca a matriz $L \times C$ e lê cada célula como texto. Se o texto for \texttt{I} ou \texttt{F}, registra a posição na estrutura e guarda valor 0; caso contrário, converte-o para inteiro com \texttt{strtol}, que aceita sinal explícito e permite detectar textos que não sejam números (como \texttt{abc}) e valores fora do intervalo de um \texttt{int}. Ao final, verifica se existe exatamente um \texttt{I} e um \texttt{F}.
+ 
+\begin{lstlisting}[language=C, caption={Trecho central da leitura das células em mapa\_ler.}]
+for (i = 0; i < mapa->linhas; i++) {
+    for (j = 0; j < mapa->colunas; j++) {
+        if (fscanf(f, "%63s", tok) != 1) { /* faltam celulas */
+            fclose(f); mapa_liberar(mapa); return MAPA_ERRO_FORMATO;
+        }
+        if (strcmp(tok, "I") == 0) {
+            mapa->inicio_linha = i; mapa->inicio_coluna = j;
+            mapa->valor[i][j] = 0;
+        } else if (strcmp(tok, "F") == 0) {
+            mapa->fim_linha = i; mapa->fim_coluna = j;
+            mapa->valor[i][j] = 0;
+        } else if (!token_para_int(tok, &mapa->valor[i][j])) {
+            fclose(f); mapa_liberar(mapa); return MAPA_ERRO_FORMATO;
+        }
+    }
+}
+\end{lstlisting}
+ 
+\textbf{“mapa\_liberar”}: Libera cada linha da matriz, depois o vetor de ponteiros, e zera os campos da estrutura. Como os ponteiros são colocados em \texttt{NULL} ao final, a função pode ser chamada mais de uma vez sem causar erro.
+ 
+\textbf{Decisões de implementação:}
+\begin{enumerate}
+    \item \textbf{Leitura dos símbolos como texto:} Como cada célula pode ser um número (inclusive com sinal, como \texttt{+20}) ou uma letra (\texttt{I} ou \texttt{F}), a leitura direta com \texttt{\%d} falharia ao encontrar uma letra. Por isso cada célula é lida como \textit{string} e só depois interpretada, o que também permite rejeitar símbolos desconhecidos em vez de ignorá-los silenciosamente.
+    \item \textbf{Valor 0 em \texttt{I} e \texttt{F}:} A posição inicial e a saída não possuem monstros nem poções. Ao armazenar 0 nessas células, o valor de qualquer célula pode ser somado sem tratar esses casos separadamente.
+    \item \textbf{Retorno de códigos de erro, sem \texttt{exit}:} O módulo nunca encerra o programa por conta própria. Ele devolve um código ao chamador, que decide como reagir. Isso mantém o módulo reutilizável e testável isoladamente.
+    \item \textbf{Alocação linha por linha com \texttt{calloc}:} A matriz é alocada como um vetor de ponteiros e depois uma linha por vez, o que permite o acesso natural \texttt{valor[i][j]}. O uso de \texttt{calloc} deixa todos os ponteiros inicialmente nulos; assim, se a alocação falhar no meio do processo, \texttt{mapa\_liberar} consegue desfazer exatamente o que já havia sido alocado, sem vazamento de memória.
+    \item \textbf{Falha segura:} Em qualquer erro, a função libera a memória já alocada e fecha o arquivo antes de retornar. Nenhuma situação de erro deixa memória pendente nem o arquivo aberto.
+\end{enumerate}
+ 
+\subsubsection*{Gerenciamento de memória}
+ 
+A função \texttt{mapa\_ler} aloca a matriz e quem a chamou é responsável por chamar \texttt{mapa\_liberar} quando o mapa deixar de ser necessário. A hierarquia de ponteiros é representada na Figura~\ref{fig:memoria}:
+ 
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.7\textwidth}
+        \ttfamily\small
+        \begin{tabular}{|l|}
+        \hline
+        Mapa m (pilha) \\
+        \quad linhas = 4, colunas = 5, hp\_inicial = 40 \\
+        \quad valor ------> [ p0 | p1 | p2 | p3 ]   (Heap, 4 ponteiros) \\
+        \quad \quad \quad \quad \quad \quad \quad  p0 --> [ -20, 0, -20, 0, 0 ] \\
+        \quad \quad \quad \quad \quad \quad \quad  p1 --> [ 0, -10, -10, -10, -10 ] \\
+        \quad \quad \quad \quad \quad \quad \quad  p2 --> [ -20, 0, 0, 0, 20 ] \\
+        \quad \quad \quad \quad \quad \quad \quad  p3 --> [ 0, 0, -10, 0, 0 ] \\
+        \hline
+        \end{tabular}
+    \end{minipage}
+    \vspace{0.2cm}
+    \caption{Alocação da matriz de valores na Heap para o exemplo \texttt{Caverna1.txt}}
+    \label{fig:memoria}
+\end{figure}
+ 
+\subsubsection*{Complexidade}
+ 
+A leitura percorre cada uma das $L \times C$ células uma única vez, realizando em cada uma operações de custo constante (leitura de um texto de tamanho limitado, comparação e conversão). Logo, a complexidade de tempo de \texttt{mapa\_ler} é $\mathcal{O}(L \times C)$. A matriz de valores ocupa $\mathcal{O}(L \times C)$ de memória, mais $\mathcal{O}(L)$ para o vetor de ponteiros, o que mantém a complexidade espacial em $\mathcal{O}(L \times C)$. A função \texttt{mapa\_liberar} percorre as $L$ linhas, com custo $\mathcal{O}(L)$.
+ 
+\section{Resultados}
+ 
+\subsection{Testes do módulo de leitura}
+ 
+Para validar o módulo de forma isolada, foi criado o programa \texttt{teste\_mapa}, que lê o arquivo informado, imprime as dimensões, os Pontos de Vida iniciais, as posições de \texttt{I} e \texttt{F} e a matriz lida, e então libera a memória. Ele é compilado com o comando \texttt{make} dentro da pasta \texttt{tp2} (que executa \texttt{gcc -Wall -Wextra -std=c99 -Iinclude -o teste\_mapa testes/teste\_mapa.c src/mapa.c}, sem advertências) e executado com o caminho de um arquivo de caverna. A execução com o exemplo do enunciado é mostrada na Figura~\ref{fig:teste_ok}:
+ 
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.8\textwidth}
+        \ttfamily\small
+        \begin{tabular}{|l|}
+        \hline
+        \$ ./teste\_mapa testes/Caverna1.txt \\
+        Dimensoes: 4 x 5 | HP inicial: 40 \\
+        I = (3, 4) | F = (1, 0) \\
+        \ -20 \ \ 0 \ -20 \ \ 0 \ \ 0 \\
+        \ \ \ 0 \ -10 \ -10 \ -10 \ -10 \\
+        \ -20 \ \ 0 \ \ 0 \ \ 0 \ \ 20 \\
+        \ \ \ 0 \ \ 0 \ -10 \ \ 0 \ \ 0 \\
+        \hline
+        \end{tabular}
+    \end{minipage}
+    \vspace{0.2cm}
+    \caption{Leitura correta do arquivo \texttt{Caverna1.txt}}
+    \label{fig:teste_ok}
+\end{figure}
+ 
+A saída confere com o arquivo de entrada: as dimensões e os Pontos de Vida iniciais estão corretos, o \texttt{I} foi localizado em $(3,4)$ e o \texttt{F} em $(1,0)$, os valores de todas as células foram preservados, o valor \texttt{+20} foi interpretado como 20, e as células \texttt{I} e \texttt{F} foram armazenadas com valor 0.
+ 
+Foram testadas também entradas inválidas, verificando se o módulo devolve o código de erro apropriado sem encerrar o programa. As execuções estão na Figura~\ref{fig:teste_erro}, e a Tabela~\ref{tab:casos} resume todos os casos:
+ 
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.8\textwidth}
+        \ttfamily\small
+        \begin{tabular}{|l|}
+        \hline
+        \$ ./teste\_mapa nao\_existe.txt \\
+        mapa\_ler falhou (codigo -1) \\[0.15cm]
+        \$ cat testes/sem\_I.txt \\
+        2 2 10 \\
+        F 1 \\
+        1 1 \\
+        \$ ./teste\_mapa testes/sem\_I.txt \\
+        mapa\_ler falhou (codigo -3) \\
+        \hline
+        \end{tabular}
+    \end{minipage}
+    \vspace{0.2cm}
+    \caption{Tratamento de arquivo inexistente e de mapa sem a posição inicial}
+    \label{fig:teste_erro}
+\end{figure}
+ 
+\begin{table}[htbp]
+\centering
+\small
+\caption{Casos de teste do módulo de leitura.}
+\label{tab:casos}
+\vspace{0.2cm}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.3cm}|>{\raggedright\arraybackslash}X|>{\centering\arraybackslash}p{2.4cm}|>{\centering\arraybackslash}p{2.0cm}|}
+\hline
+\textbf{Caso} & \textbf{Descrição} & \textbf{Esperado} & \textbf{Obtido} \\
+\hline
+\texttt{Caverna1.txt} & Mapa $4 \times 5$ do enunciado, HP 40, com \texttt{+20} & Leitura correta (código 0) & Conforme \\
+\hline
+\texttt{nao\_existe.txt} & Arquivo que não existe & Código $-1$ & Conforme \\
+\hline
+\texttt{sem\_I.txt} & Mapa $2 \times 2$ sem a posição inicial \texttt{I} & Código $-3$ & Conforme \\
+\hline
+\end{tabularx}
+\end{table}
+ 
+Os arquivos de entrada utilizados estão na pasta \texttt{tp2/testes} do repositório: \texttt{Caverna1.txt} e \texttt{sem\_I.txt}.
+ 
+\end{document}
