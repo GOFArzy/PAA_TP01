@@ -1,7 +1,9 @@
 \documentclass[12pt,a4paper]{article}
  
-% --- Pacotes essenciais de formatação (mesmos do TP1) ---
+% Pacotes essenciais de formatação (mesmos do TP1) 
 \usepackage[utf8]{inputenc}
+\DeclareUnicodeCharacter{201C}{``}
+\DeclareUnicodeCharacter{201D}{''}
 \usepackage[T1]{fontenc}
 \usepackage[brazil]{babel}
 \usepackage{mathptmx}
@@ -28,7 +30,13 @@
 \usepackage[htt]{hyphenat}
 \usepackage{microtype}
  
-\renewcommand{\_}{\textunderscore\allowbreak}
+\DeclareRobustCommand{\_}{%
+  \ifmmode
+    \nfss@text{\textunderscore}%
+  \else
+    \textunderscore\allowbreak
+  \fi
+}
  
 \renewcommand{\topfraction}{0.85}
 \renewcommand{\bottomfraction}{0.85}
@@ -145,9 +153,9 @@
  
 \section{Desenvolvimento}
  
-\subsection{“mapa.c” e “mapa.h”}
+\subsection{``mapa.c'' e ``mapa.h''}
  
-O módulo do mapa é responsável por abrir o arquivo de entrada, validar seu conteúdo, armazenar a caverna em memória e liberar essa memória ao final. Foi utilizado “stdio.h” para a leitura do arquivo, “stdlib.h” para a alocação dinâmica e a conversão de números, “string.h” para a comparação dos símbolos \texttt{I} e \texttt{F}, “limits.h” para validar o intervalo dos inteiros lidos e “errno.h” para detectar estouro na conversão. Os arquivos do módulo são \texttt{include/mapa.h} (interface), \texttt{src/mapa.c} (implementação) e \texttt{testes/teste\_mapa.c} (programa de teste).
+O módulo do mapa é responsável por abrir o arquivo de entrada, validar seu conteúdo, armazenar a caverna em memória e liberar essa memória ao final. Foi utilizado `stdio.h' para a leitura do arquivo, `stdlib.h' para a alocação dinâmica e a conversão de números, `string.h' para a comparação dos símbolos \texttt{I} e \texttt{F}, `limits.h' para validar o intervalo dos inteiros lidos e `errno.h' para detectar estouro na conversão. Os arquivos do módulo são \texttt{include/mapa.h} (interface), \texttt{src/mapa.c} (implementação) e \texttt{testes/teste\_mapa.c} (programa de teste).
  
 \subsubsection*{Formato do arquivo de entrada}
  
@@ -216,7 +224,7 @@ O cabeçalho também define os códigos de retorno da leitura, que permitem ao c
 \end{tabularx}
 \end{table}
  
-\textbf{“mapa\_ler”}: Abre o arquivo e lê a primeira linha, validando que as dimensões são positivas. Em seguida aloca a matriz $L \times C$ e lê cada célula como texto. Se o texto for \texttt{I} ou \texttt{F}, registra a posição na estrutura e guarda valor 0; caso contrário, converte-o para inteiro com \texttt{strtol}, que aceita sinal explícito e permite detectar textos que não sejam números (como \texttt{abc}) e valores fora do intervalo de um \texttt{int}. Ao final, verifica se existe exatamente um \texttt{I} e um \texttt{F}.
+\textbf{`mapa\_ler'}: Abre o arquivo e lê a primeira linha, validando que as dimensões são positivas. Em seguida aloca a matriz $L \times C$ e lê cada célula como texto. Se o texto for \texttt{I} ou \texttt{F}, registra a posição na estrutura e guarda valor 0; caso contrário, converte-o para inteiro com \texttt{strtol}, que aceita sinal explícito e permite detectar textos que não sejam números (como \texttt{abc}) e valores fora do intervalo de um \texttt{int}. Ao final, verifica se existe exatamente um \texttt{I} e um \texttt{F}.
  
 \begin{lstlisting}[language=C, caption={Trecho central da leitura das células em mapa\_ler.}]
 for (i = 0; i < mapa->linhas; i++) {
@@ -237,7 +245,7 @@ for (i = 0; i < mapa->linhas; i++) {
 }
 \end{lstlisting}
  
-\textbf{“mapa\_liberar”}: Libera cada linha da matriz, depois o vetor de ponteiros, e zera os campos da estrutura. Como os ponteiros são colocados em \texttt{NULL} ao final, a função pode ser chamada mais de uma vez sem causar erro.
+\textbf{`mapa\_liberar'}: Libera cada linha da matriz, depois o vetor de ponteiros, e zera os campos da estrutura. Como os ponteiros são colocados em \texttt{NULL} ao final, a função pode ser chamada mais de uma vez sem causar erro.
  
 \textbf{Decisões de implementação:}
 \begin{enumerate}
@@ -277,6 +285,178 @@ A função \texttt{mapa\_ler} aloca a matriz e quem a chamou é responsável por
  
 A leitura percorre cada uma das $L \times C$ células uma única vez, realizando em cada uma operações de custo constante (leitura de um texto de tamanho limitado, comparação e conversão). Logo, a complexidade de tempo de \texttt{mapa\_ler} é $\mathcal{O}(L \times C)$. A matriz de valores ocupa $\mathcal{O}(L \times C)$ de memória, mais $\mathcal{O}(L)$ para o vetor de ponteiros, o que mantém a complexidade espacial em $\mathcal{O}(L \times C)$. A função \texttt{mapa\_liberar} percorre as $L$ linhas, com custo $\mathcal{O}(L)$.
  
+% =========================================================================
+% Programação Dinâmica
+% =========================================================================
+
+\subsection{``dp.c'' e ``dp.h''}
+
+O módulo de programação dinâmica é responsável por determinar a rota que maximiza os Pontos de Vida finais do estudante ao escapar da caverna, além de identificar se existe ao menos um caminho viável que permita alcançar a saída \texttt{F} sem que a vida chegue a zero ou a valores negativos. Foram utilizadas as bibliotecas \texttt{<stdio.h>} para operações de entrada e saída, \texttt{<stdlib.h>} para alocação e liberação dinâmica de memória, e \texttt{<limits.h>} para o uso da constante \texttt{INT\_MIN}, empregada como sentinela de células inacessíveis. Os arquivos que compõem o módulo são \texttt{include/dp.h} (interface pública) e \texttt{src/dp.c} (implementação dos algoritmos).
+
+\subsubsection*{Princípio da Programação Dinâmica e relação de recorrência}
+
+O problema consiste em conduzir o personagem da posição inicial \texttt{I} até a saída \texttt{F}. Pelas regras estabelecidas, a partir de qualquer célula $(i,j)$ os únicos movimentos permitidos são para \textbf{cima} (linha $i-1$) e para a \textbf{esquerda} (coluna $j-1$). Dessa forma, para que o estudante alcance a célula $(i,j)$, o passo imediatamente anterior deve ter ocorrido obrigatoriamente a partir de $(i+1,j)$ (movimento para cima vindo da linha de baixo) ou de $(i,j+1)$ (movimento para a esquerda vindo da coluna à direita).
+
+O problema exibe as duas características fundamentais que justificam o uso de Programação Dinâmica:
+\begin{enumerate}
+    \item \textbf{Subestrutura Ótima:} O maior valor de Pontos de Vida acumulado ao alcançar uma célula $(i,j)$ pode ser decomposto na escolha ótima entre os estados antecessores viáveis $(i+1,j)$ e $(i,j+1)$, acrescido da variação de vida da própria célula $(i,j)$;
+    \item \textbf{Sobreposição de Subproblemas:} Diferentes trajetórias que partem de \texttt{I} convergem para as mesmas células intermediárias da caverna. Em vez de reavaliar recursivamente essas rotas múltiplas vezes (o que levaria a uma árvore exponencial), a tabela armazena a melhor solução para cada célula assim que é calculada.
+\end{enumerate}
+
+Sendo $\text{DP}[i][j]$ o valor máximo de Pontos de Vida com que o estudante ingressa na célula $(i,j)$, e $\text{valor}[i][j]$ a alteração de HP conferida por essa célula, a relação de recorrência que governa o preenchimento da tabela é:
+
+\begin{equation}
+\text{DP}[i][j] = \max\Big(\text{DP}[i+1][j],\; \text{DP}[i][j+1]\Big) + \text{valor}[i][j]
+\label{eq:recorrencia_dp}
+\end{equation}
+
+sob as seguintes condições de contorno e restrições de viabilidade:
+\begin{itemize}
+    \item \textbf{Caso Base:} Na posição inicial $I = (i_I, j_I)$, o valor é inicializado diretamente com o HP fornecido pelo arquivo de entrada:
+    $$\text{DP}[i_I][j_I] = \text{hp\_inicial}$$
+    \item \textbf{Condição de Vida Positiva para Transição:} Um movimento a partir de um vizinho só é considerado se o personagem estiver vivo naquela célula, ou seja, $\text{DP}[i+1][j] > 0$ ou $\text{DP}[i][j+1] > 0$. Vizinhos não visitados ou onde houve morte contêm \texttt{INT\_MIN} e são desconsiderados;
+    \item \textbf{Sobrevivência na Célula Atual:} Caso o valor resultante da transição $\text{DP}[i][j] \le 0$, o estudante perece naquela sala, tornando-a inviável como ponto de passagem. Nesses casos, o valor não é consolidado como rota válida e o estado permanece como inacessível.
+\end{itemize}
+
+\subsubsection*{Ordem topológica de preenchimento}
+
+Como a transição da célula $(i,j)$ depende dos valores já computados em $(i+1,j)$ e $(i,j+1)$, o algoritmo deve resolver primeiro as linhas inferiores e colunas à direita. O algoritmo inicia na linha de \texttt{I} e percorre a matriz em sentido decrescente:
+
+\begin{itemize}
+    \item O laço externo itera a linha $i$ de $i_I$ até $0$ (de baixo para cima);
+    \item O laço interno itera a coluna $j$ de $j_I$ até $0$ (da direita para a esquerda).
+\end{itemize}
+
+Dessa forma, no momento em que qualquer célula $(i,j)$ é avaliada, suas dependências $(i+1,j)$ e $(i,j+1)$ já foram completamente resolvidas e memorizadas na tabela.
+
+\subsubsection*{Estruturas de dados}
+
+O cabeçalho \texttt{include/dp.h} define a estrutura central de resolução:
+
+\begin{lstlisting}[language=C, caption={Estrutura Solucao que consolida os resultados da Programação Dinâmica.}]
+struct Solucao {
+    int existe_caminho;       /* 1 se F e alcancavel com HP > 0, 0 caso contrario */
+    int possivel;             /* mantido para retrocompatibilidade */
+    int hp_final;             /* maior HP ao chegar em F */
+    int **melhor_hp;          /* tabela L x C com o maior HP em cada celula */
+    Coordenada **pai;         /* tabela L x C com a celula antecessora */
+};
+\end{lstlisting}
+
+\begin{itemize}
+    \item \texttt{existe\_caminho} e \texttt{possivel}: \textit{flags} booleanas que registram se a saída \texttt{F} foi alcançada com vida positiva ($\text{HP} > 0$);
+    \item \texttt{hp\_final}: armazena o valor ótimo de Pontos de Vida acumulados na célula de saída $(fim\_linha, fim\_coluna)$;
+    \item \texttt{melhor\_hp}: matriz $L \times C$ de inteiros alocada na \textit{Heap}, correspondente à tabela de programação dinâmica, onde cada entrada guarda o maior HP viável;
+    \item \texttt{pai}: matriz $L \times C$ de coordenadas (\texttt{Coordenada \{int linha; int coluna;\}}), onde cada posição guarda a célula imediatamente anterior que originou o caminho ótimo até $(i,j)$. Essa matriz viabiliza a posterior reconstrução do trajeto sem necessidade de recalcular a DP.
+\end{itemize}
+
+\subsubsection*{Funções e implementação}
+
+O módulo organiza o fluxo de resolução em duas funções públicas e quatro rotinas estáticas auxiliares de gerenciamento de matrizes:
+
+\textbf{`alocar\_matriz\_int' e `alocar\_matriz\_coord'}: Alocam matrizes bidimensionais na \textit{Heap} utilizando \texttt{calloc}, garantindo inicialização limpa. Caso ocorra falta de memória no meio do laço de alocação das linhas, a função desaloca imediatamente as linhas previamente concedidas antes de retornar \texttt{NULL}, evitando qualquer vazamento residual de memória.
+
+\textbf{`liberar\_matriz\_int' e `liberar\_matriz\_coord'}: Percorrem as $L$ linhas da matriz liberando cada bloco e, ao término, liberam o vetor principal de ponteiros.
+
+\textbf{`dp\_resolver'}: Orquestra a execução da programação dinâmica:
+\begin{enumerate}
+    \item Inicializa os campos da estrutura \texttt{Solucao} com valores nulos e aloca as matrizes \texttt{melhor\_hp} e \texttt{pai};
+    \item Preenche todas as células de \texttt{melhor\_hp} com a constante sentinela \texttt{INT\_MIN} e as coordenadas em \texttt{pai} com $(-1,-1)$;
+    \item Define o caso base na célula inicial $(inicio\_linha, inicio\_coluna)$ com o HP inicial lido do mapa;
+    \item Executa os laços aninhados de programação dinâmica em ordem decrescente de linhas e colunas;
+    \item Para cada célula, examina se o vizinho de baixo $(i+1,j)$ e o da direita $(i,j+1)$ possuem HP positivo, elegendo aquele com maior valor acumulado;
+    \item Soma o efeito da célula $\text{valor}[i][j]$. Se o resultado for estritamente positivo ($\text{HP} > 0$), atualiza a tabela e define o predecessor;
+    \item Ao final do preenchimento, inspeciona a célula de destino $(fim\_linha, fim\_coluna)$. Se ela foi alcançada com $\text{HP} > 0$, marca a solução como viável, atribui o HP final e retorna $1$. Caso contrário, define que não existe caminho e retorna $0$.
+\end{enumerate}
+
+\begin{lstlisting}[language=C, caption={Trecho central do preenchimento da tabela em dp\_resolver.}]
+for (i = il; i >= 0; i--) {
+    for (j = ic; j >= 0; j--) {
+        if (i == il && j == ic)
+            continue; /* caso base ja tratado */
+
+        int melhor = INT_MIN;
+        Coordenada origem = {-1, -1};
+
+        /* Veio de baixo (movimento para cima) */
+        if (i + 1 < mapa->linhas && solucao->melhor_hp[i + 1][j] > 0) {
+            if (solucao->melhor_hp[i + 1][j] > melhor) {
+                melhor = solucao->melhor_hp[i + 1][j];
+                origem.linha = i + 1;
+                origem.coluna = j;
+            }
+        }
+
+        /* Veio da direita (movimento para esquerda) */
+        if (j + 1 < mapa->colunas && solucao->melhor_hp[i][j + 1] > 0) {
+            if (solucao->melhor_hp[i][j + 1] > melhor) {
+                melhor = solucao->melhor_hp[i][j + 1];
+                origem.linha = i;
+                origem.coluna = j + 1;
+            }
+        }
+
+        if (melhor != INT_MIN) {
+            int hp_novo = melhor + mapa->valor[i][j];
+            if (hp_novo > 0) {
+                solucao->melhor_hp[i][j] = hp_novo;
+                solucao->pai[i][j] = origem;
+            }
+        }
+    }
+}
+\end{lstlisting}
+
+\textbf{`dp\_liberar'}: Desaloca com segurança as duas matrizes dinâmicas da solução chamando as rotinas de liberação, zera todos os ponteiros para \texttt{NULL} e reseta os contadores da estrutura, permitindo que a função seja invocada repetidas vezes sem risco de falha de segmentação (\textit{double free}).
+
+\textbf{Decisões de implementação:}
+\begin{enumerate}
+    \item \textbf{Diferenciação entre célula inalcançável e morte:} Ao utilizar \texttt{INT\_MIN} como valor sentinela, distingue-se com exatidão uma célula que nunca pôde ser alcançada por nenhuma rota daquelas em que o personagem alcança mas tem vida nula ou negativa ($\le 0$).
+    \item \textbf{Prevenção contra transições a partir de personagens mortos:} A condicional \texttt{melhor\_hp[...] > 0} garante que caminhos onde o estudante morre não continuem a ser propagados na tabela, respeitando rigorosamente a restrição de que a vida deve ser sempre positiva.
+    \item \textbf{Gravação implícita de predecessores para reconstrução:} O registro da coordenada de origem em \texttt{pai[i][j]} durante o próprio preenchimento descarta a necessidade de manter pilhas de busca ou executar nova exploração retroativa comparando diferenças de valores, reduzindo a complexidade de recuperação do percurso para tempo linear estrito.
+    \item \textbf{Robustez e tratamento defensivo:} Caso ponteiros nulos sejam fornecidos ou as coordenadas de início/fim estejam fora dos limites do mapa, a rotina aborta a resolução de forma controlada devolvendo código de erro sem interrupções abruptas (\textit{crash}).
+\end{enumerate}
+
+\subsubsection*{Gerenciamento de memória}
+
+A estrutura \texttt{Solucao} reside normalmente na pilha da função chamadora, enquanto seus membros \texttt{melhor\_hp} e \texttt{pai} apontam para blocos alocados dinamicamente na \textit{Heap}. A Figura~\ref{fig:memoria_dp} ilustra a disposição dos ponteiros e matrizes para o exemplo do enunciado:
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.78\textwidth}
+        \ttfamily\small
+        \begin{tabular}{|l|}
+        \hline
+        Solucao s (pilha) \\
+        \quad existe\_caminho = 1, hp\_final = 50 \\
+        \quad melhor\_hp -----> [ p0 | p1 | p2 | p3 ] (Heap, 4 ponteiros de int*) \\
+        \quad \quad \quad \quad \quad \quad \quad p0 --> [ --, --, --, --, -- ]  (-- representa INT\_MIN) \\
+        \quad \quad \quad \quad \quad \quad \quad p1 --> [ 50, 50, --, --, -- ]  (F em (1,0) = 50) \\
+        \quad \quad \quad \quad \quad \quad \quad p2 --> [ --, 60, 60, 60, 60 ] \\
+        \quad \quad \quad \quad \quad \quad \quad p3 --> [ --, --, --, --, 40 ]  (I em (3,4) = 40) \\[0.15cm]
+        \quad pai -----------> [ q0 | q1 | q2 | q3 ] (Heap, 4 ponteiros de Coord*) \\
+        \quad \quad \quad \quad \quad \quad \quad q0 --> [ (-1,-1), (-1,-1), \dots ] \\
+        \quad \quad \quad \quad \quad \quad \quad q1 --> [ (1,1), (2,1), \dots ]  (origem de F é (1,1)) \\
+        \quad \quad \quad \quad \quad \quad \quad q2 --> [ (-1,-1), (2,2), (2,3), (2,4), (3,4) ] \\
+        \quad \quad \quad \quad \quad \quad \quad q3 --> [ \dots, (-1,-1) ]       (I não tem predecessor) \\
+        \hline
+        \end{tabular}
+    \end{minipage}
+    \vspace{0.2cm}
+    \caption{Alocação e valores das tabelas \texttt{melhor\_hp} e \texttt{pai} na Heap para \texttt{Caverna1.txt}}
+    \label{fig:memoria_dp}
+\end{figure}
+
+\subsubsection*{Complexidade}
+
+A função \texttt{dp\_resolver} visita cada uma das $L \times C$ células no máximo uma vez. Em cada célula, são realizadas no máximo duas consultas a vizinhos adjacentes, comparações de inteiros e uma soma aritmética, todas operações de custo elementar $\mathcal{O}(1)$. Portanto, a complexidade de tempo de resolução por Programação Dinâmica é rigorosamente:
+$$\mathcal{O}(L \times C)$$
+Em termos de espaço, são alocadas duas matrizes de dimensão $L \times C$ (\texttt{melhor\_hp} de inteiros e \texttt{pai} de estruturas \texttt{Coordenada}), além dos vetores auxiliares de ponteiros de dimensão $L$, totalizando complexidade espacial de:
+$$\mathcal{O}(L \times C)$$
+A liberação de memória em \texttt{dp\_liberar} percorre as $L$ linhas das duas matrizes, demandando tempo $\mathcal{O}(L)$ e espaço adicional $\mathcal{O}(1)$.
+
+
+
 \section{Resultados}
  
 \subsection{Testes do módulo de leitura}
