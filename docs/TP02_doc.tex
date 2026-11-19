@@ -345,7 +345,7 @@ struct Solucao {
 
 \begin{itemize}
     \item \texttt{existe\_caminho} e \texttt{possivel}: \textit{flags} booleanas que registram se a saída \texttt{F} foi alcançada com vida positiva ($\text{HP} > 0$);
-    \item \texttt{hp\_final}: armazena o valor ótimo de Pontos de Vida acumulados na célula de saída $(fim\_linha, fim\_coluna)$;
+    \item \texttt{hp\_final}: armazena o valor ótimo de Pontos de Vida acumulados na célula de saída $(\text{fim\_linha}, \text{fim\_coluna})$;
     \item \texttt{melhor\_hp}: matriz $L \times C$ de inteiros alocada na \textit{Heap}, correspondente à tabela de programação dinâmica, onde cada entrada guarda o maior HP viável;
     \item \texttt{pai}: matriz $L \times C$ de coordenadas (\texttt{Coordenada \{int linha; int coluna;\}}), onde cada posição guarda a célula imediatamente anterior que originou o caminho ótimo até $(i,j)$. Essa matriz viabiliza a posterior reconstrução do trajeto sem necessidade de recalcular a DP.
 \end{itemize}
@@ -362,11 +362,11 @@ O módulo organiza o fluxo de resolução em duas funções públicas e quatro r
 \begin{enumerate}
     \item Inicializa os campos da estrutura \texttt{Solucao} com valores nulos e aloca as matrizes \texttt{melhor\_hp} e \texttt{pai};
     \item Preenche todas as células de \texttt{melhor\_hp} com a constante sentinela \texttt{INT\_MIN} e as coordenadas em \texttt{pai} com $(-1,-1)$;
-    \item Define o caso base na célula inicial $(inicio\_linha, inicio\_coluna)$ com o HP inicial lido do mapa;
+    \item Define o caso base na célula inicial $(\text{inicio\_linha}, \text{inicio\_coluna})$ com o HP inicial lido do mapa;
     \item Executa os laços aninhados de programação dinâmica em ordem decrescente de linhas e colunas;
     \item Para cada célula, examina se o vizinho de baixo $(i+1,j)$ e o da direita $(i,j+1)$ possuem HP positivo, elegendo aquele com maior valor acumulado;
     \item Soma o efeito da célula $\text{valor}[i][j]$. Se o resultado for estritamente positivo ($\text{HP} > 0$), atualiza a tabela e define o predecessor;
-    \item Ao final do preenchimento, inspeciona a célula de destino $(fim\_linha, fim\_coluna)$. Se ela foi alcançada com $\text{HP} > 0$, marca a solução como viável, atribui o HP final e retorna $1$. Caso contrário, define que não existe caminho e retorna $0$.
+    \item Ao final do preenchimento, inspeciona a célula de destino $(\text{fim\_linha}, \text{fim\_coluna})$. Se ela foi alcançada com $\text{HP} > 0$, marca a solução como viável, atribui o HP final e retorna $1$. Caso contrário, define que não existe caminho e retorna $0$.
 \end{enumerate}
 
 \begin{lstlisting}[language=C, caption={Trecho central do preenchimento da tabela em dp\_resolver.}]
