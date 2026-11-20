@@ -639,6 +639,234 @@ void caminho_desenhar_ascii(FILE *saida, const Mapa *mapa,
 
 O módulo aceita qualquer descritor de fluxo (\texttt{FILE *saida}), permitindo direcionar as visualizações para o console padrão (\texttt{stdout}) ou para arquivos de auditoria, preservando total independência em relação ao modo de execução obrigatório do programa.
 
+% =========================================================================
+% Gravação e saída do resultado (Gabs)
+% =========================================================================
+
+\subsection{``saida.c'' e ``saida.h''}
+
+O módulo de saída é responsável por persistir o resultado final do algoritmo no arquivo especificado pelo usuário (por padrão, \texttt{resultado.txt}), além de permitir a exibição formatada do percurso em qualquer fluxo de saída de texto aberto (como \texttt{stdout} ou \texttt{stderr}). A separação da escrita em um módulo dedicado isola o programa das operações de entrada e saída em disco, permitindo que os algoritmos de Programação Dinâmica e de reconstrução permaneçam livres de acoplamento com o sistema de arquivos. Os arquivos do módulo são \texttt{include/saida.h} (interface pública), \texttt{src/saida.c} (implementação) e \texttt{testes/teste\_saida.c} (suíte de testes unitários).
+
+\subsubsection*{Formato do arquivo de resultado}
+
+O comportamento do módulo de saída atende rigorosamente às exigências estipuladas no enunciado do trabalho:
+\begin{enumerate}
+    \item \textbf{Quando existe caminho viável:} O arquivo de saída contém exatamente uma coordenada por linha, no formato \texttt{"linha coluna"}, com indexação iniciada em zero (\textit{zero-based}), ordenada cronologicamente desde a célula inicial \texttt{I} até a saída \texttt{F};
+    \item \textbf{Quando não existe caminho viável:} O arquivo de saída não contém nenhuma coordenada nem mensagens adicionais, contendo única e exclusivamente a palavra sentinela \texttt{"impossível"}.
+\end{enumerate}
+
+\subsubsection*{Estruturas e códigos de retorno}
+
+O cabeçalho \texttt{include/saida.h} define as constantes e códigos de retorno utilizados para sinalizar o status das operações de gravação:
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Códigos de retorno e constantes do módulo de saída.}
+\label{tab:codigos_saida}
+\vspace{0.2cm}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{4.8cm}|c|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{Constante} & \textbf{Valor} & \textbf{Significado} \\
+\hline
+\texttt{SAIDA\_OK} & 0 & Gravação ou impressão concluída com sucesso \\
+\hline
+\texttt{SAIDA\_ERRO\_ARQUIVO} & $-1$ & Falha ao abrir ou criar o arquivo em disco \\
+\hline
+\texttt{SAIDA\_ERRO\_PARAMETROS} & $-2$ & Parâmetros inválidos (ponteiro de arquivo ou caminho nulo) \\
+\hline
+\texttt{SAIDA\_TEXTO\_SEM\_SOLUCAO} & \texttt{"impossível"} & Sequência textual exata gravada na ausência de rota \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsubsection*{Funções e implementação}
+
+O módulo fornece duas funções principais:
+
+\textbf{`resultado\_imprimir'}: Recebe um ponteiro de fluxo \texttt{FILE*} já aberto, o indicador booleano de existência de solução \texttt{existe\_caminho}, o vetor de coordenadas e a quantidade de passos. Caso \texttt{existe\_caminho} seja falso, ou o vetor seja nulo, imprime exclusivamente a constante \texttt{SAIDA\_TEXTO\_SEM\_SOLUCAO}. Caso contrário, percorre o vetor sequencialmente imprimindo a linha e a coluna de cada passo.
+
+\textbf{`resultado\_gravar'}: Recebe o nome ou caminho do arquivo de destino. A função valida os parâmetros, abre o arquivo em modo de escrita (\texttt{"w"}), delega a formatação para \texttt{resultado\_imprimir} e fecha o arquivo com segurança através de \texttt{fclose}, retornando o status correspondente.
+
+\begin{lstlisting}[language=C, caption={Implementação das funções de gravação e impressão em saida.c.}]
+int resultado_imprimir(FILE *stream, int existe_caminho,
+                       const Coordenada *caminho, int quantidade)
+{
+    if (stream == NULL)
+        return SAIDA_ERRO_PARAMETROS;
+
+    if (!existe_caminho || caminho == NULL || quantidade <= 0) {
+        fprintf(stream, "%s\n", SAIDA_TEXTO_SEM_SOLUCAO);
+        return SAIDA_OK;
+    }
+
+    for (int i = 0; i < quantidade; i++) {
+        fprintf(stream, "%d %d\n", caminho[i].linha, caminho[i].coluna);
+    }
+
+    return SAIDA_OK;
+}
+
+int resultado_gravar(const char *arquivo, int existe_caminho,
+                     const Coordenada *caminho, int quantidade)
+{
+    if (arquivo == NULL)
+        return SAIDA_ERRO_PARAMETROS;
+
+    FILE *f = fopen(arquivo, "w");
+    if (f == NULL)
+        return SAIDA_ERRO_ARQUIVO;
+
+    int status = resultado_imprimir(f, existe_caminho, caminho, quantidade);
+
+    if (fclose(f) != 0)
+        return SAIDA_ERRO_ARQUIVO;
+
+    return status;
+}
+\end{lstlisting}
+
+\textbf{Decisões de implementação:}
+\begin{enumerate}
+    \item \textbf{Modularidade e reuso (DRY):} A separação entre \texttt{resultado\_gravar} e \texttt{resultado\_imprimir} elimina duplicação de lógica. A mesma rotina que grava em arquivo pode ser utilizada para enviar o resultado para a saída padrão ou para fluxos de depuração;
+    \item \textbf{Garantia de ausência de ruído:} Para cenários sem solução, assegura-se que nenhuma linha em branco, caractere de espaço ou mensagem de depuração seja inserida além da palavra estipulada;
+    \item \textbf{Fechamento seguro de arquivo:} A rotina verifica o retorno de \texttt{fclose}, prevenindo corrupção silenciosa de dados em falhas de gravação.
+\end{enumerate}
+
+\subsubsection*{Complexidade}
+
+A gravação do percurso percorre o vetor de passos exatamente uma vez, realizando $K$ operações elementares de escrita formatada. Portanto, a complexidade temporal é $\mathcal{O}(K)$, onde $K \le L + C$ representa o número de células do percurso. A complexidade espacial adicional é $\mathcal{O}(1)$, já que a função opera diretamente sobre a memória previamente alocada.
+
+% =========================================================================
+% Execução, CLI e coordenação (Gabs)
+% =========================================================================
+
+\subsection{``main.c'', integração e interface de linha de comando}
+
+O arquivo \texttt{src/main.c} representa o ponto de entrada da aplicação, integrando de maneira coesa e desacoplada os módulos desenvolvidos pelos integrantes do grupo. Ele orquestra sequencialmente o fluxo de processamento:
+\begin{equation}
+\text{Interface CLI} \longrightarrow \text{mapa\_ler} \longrightarrow \text{dp\_resolver} \longrightarrow \text{caminho\_reconstruir} \longrightarrow \text{caminho\_validar} \longrightarrow \text{resultado\_gravar}
+\end{equation}
+
+\subsubsection*{Interface de linha de comando (CLI)}
+
+A aplicação é executada via linha de comando sem interface gráfica, respeitando as convenções estabelecidas:
+\begin{itemize}
+    \item \texttt{./tp2 <arquivo\_mapa> [arquivo\_saida] [opcoes]}: Sintaxe básica de invocação;
+    \item \texttt{<arquivo\_mapa>}: Parâmetro posicional obrigatório que indica o arquivo com a caverna;
+    \item \texttt{[arquivo\_saida]}: Parâmetro posicional opcional que define o arquivo de saída. Caso omitido, utiliza por padrão \texttt{resultado.txt} no diretório corrente;
+    \item \texttt{-v, --verbose}: Opção que exibe no terminal o relatório analítico do percurso (variação passo a passo do HP, dano acumulado e cura total) e o mapa da caverna desenhado em arte ASCII com a rota traçada;
+    \item \texttt{-h, --help}: Exibe o manual de utilização e parâmetros do executável, encerrando com código de sucesso.
+\end{itemize}
+
+Caso nenhum argumento seja fornecido, o programa emite uma mensagem clara de uso em \texttt{stderr} e encerra imediatamente com \texttt{EXIT\_FAILURE}, sem causar falha de segmentação.
+
+\begin{lstlisting}[language=C, caption={Estrutura central de coordenação e tratamento em main.c.}]
+int main(int argc, char *argv[])
+{
+    /* 1. Analise de argumentos de linha de comando */
+    ...
+    /* 2. Leitura do Mapa (Rafa) */
+    Mapa mapa;
+    int status_mapa = mapa_ler(arquivo_mapa, &mapa);
+    if (status_mapa != MAPA_OK) {
+        /* Trata codigos de erro com mensagens especificas em stderr */
+        return EXIT_FAILURE;
+    }
+
+    /* 3. Programacao Dinamica (Tomas) */
+    Solucao solucao;
+    int tem_solucao = dp_resolver(&mapa, &solucao);
+
+    /* 4. Reconstrucao e Validacao do Caminho (Otavio) */
+    Coordenada *caminho = NULL;
+    int quantidade_passos = 0;
+    int status_caminho = CAMINHO_SEM_SOLUCAO;
+
+    if (tem_solucao && solucao.existe_caminho) {
+        status_caminho = caminho_reconstruir(&mapa, &solucao, &caminho, &quantidade_passos);
+        if (status_caminho == CAMINHO_OK) {
+            caminho_validar(&mapa, caminho, quantidade_passos);
+        }
+    }
+
+    /* 5. Gravacao de Saida (Gabs) */
+    if (status_caminho == CAMINHO_OK && caminho != NULL && quantidade_passos > 0) {
+        resultado_gravar(arquivo_saida, 1, caminho, quantidade_passos);
+        printf("[SUCESSO] Rota encontrada! Passos: %d | HP final maximo: %d | Gravado em: %s\n",
+               quantidade_passos, solucao.hp_final, arquivo_saida);
+        if (verbose) {
+            caminho_imprimir_relatorio(stdout, &mapa, caminho, quantidade_passos);
+            caminho_desenhar_ascii(stdout, &mapa, caminho, quantidade_passos);
+        }
+    } else {
+        resultado_gravar(arquivo_saida, 0, NULL, 0);
+        printf("[SEM SOLUCAO] Nao ha rota viavel ate a saida F. Gravado \"%s\" em '%s'.\n",
+               SAIDA_TEXTO_SEM_SOLUCAO, arquivo_saida);
+    }
+
+    /* 6. Liberacao completa de recursos de todos os modulos */
+    caminho_liberar(caminho);
+    dp_liberar(&mapa, &solucao);
+    mapa_liberar(&mapa);
+
+    return EXIT_SUCCESS;
+}
+\end{lstlisting}
+
+\subsubsection*{Gerenciamento de memória e política de encerramento}
+
+A função \texttt{main} atua como guardiã da integridade da memória do programa. Todos os recursos alocados pelos módulos chamados (\texttt{mapa\_ler}, \texttt{dp\_resolver} e \texttt{caminho\_reconstruir}) possuem pontos garantidos de liberação ao término da execução (\texttt{mapa\_liberar}, \texttt{dp\_liberar} e \texttt{caminho\_liberar}), assegurando que nenhum bloco alocado na \textit{Heap} permaneça órfão (\textit{zero memory leaks}).
+
+% =========================================================================
+% Automação e compilação (Makefile - Gabs)
+% =========================================================================
+
+\subsection{Compilação e automação com ``Makefile''}
+
+A compilação do projeto é inteiramente automatizada pelo arquivo \texttt{tp2/Makefile}. Foram adotadas diretivas de compilação rigorosas para garantir a portabilidade e conformidade com o padrão C99:
+\begin{itemize}
+    \item Compilador: \texttt{gcc};
+    \item \textit{Flags} utilizadas: \texttt{-Wall -Wextra -std=c99 -Iinclude}.
+\end{itemize}
+
+O \texttt{Makefile} suporta os seguintes alvos de compilação e teste:
+\begin{itemize}
+    \item \texttt{make all}: Compila o executável principal (\texttt{tp2}), o gerador de mapas (\texttt{gerador}) e os testes de unidade (\texttt{teste\_mapa}, \texttt{teste\_caminho} e \texttt{teste\_saida});
+    \item \texttt{make tp2}: Compila unicamente o binário integrado da aplicação;
+    \item \texttt{make test}: Executa sequencialmente a suíte de testes de todos os módulos e um teste integrado ponta a ponta com \texttt{Caverna1.txt};
+    \item \texttt{make run}: Executa o programa principal com a entrada padrão do enunciado;
+    \item \texttt{make clean}: Remove com segurança todos os binários executáveis (\texttt{.exe} em ambiente Windows ou executáveis padrão em ambiente Unix), arquivos-objeto intermediários (\texttt{*.o}) e arquivos temporários de saída.
+\end{itemize}
+
+% =========================================================================
+% Extra 4: Gerador de mapas (Gabs)
+% =========================================================================
+
+\subsection{Extra 4: Gerador independente de mapas (``gerador.c'')}
+
+Para apoiar as etapas de testes de carga, validação de limites e análise empírica de desempenho, foi implementado o utilitário independente \texttt{src/gerador.c}, compilado como o executável \texttt{gerador}.
+
+\subsubsection*{Parâmetros e funcionalidades}
+
+O gerador opera através de linha de comando recebendo os seguintes parâmetros:
+\begin{lstlisting}[language=bash, caption={Sintaxe de invocacao do gerador de mapas.}]
+./gerador <arquivo_saida> <linhas> <colunas> <hp_inicial> [val_min] [val_max] [semente] [modo]
+\end{lstlisting}
+
+\begin{itemize}
+    \item \texttt{<arquivo\_saida>}: Nome do arquivo \texttt{.txt} a ser gerado;
+    \item \texttt{<linhas>} e \texttt{<colunas>}: Dimensões retangulares da caverna ($L \ge 2, C \ge 2$);
+    \item \texttt{<hp\_inicial>}: Pontos de vida iniciais atribuídos ao personagem ($\text{HP} > 0$);
+    \item \texttt{[val\_min]} e \texttt{[val\_max]}: Faixa numérica sorteada para as salas da caverna (padrão: $[-20, +20]$);
+    \item \texttt{[semente]}: Semente numérica para o gerador pseudoaleatório \texttt{srand}, permitindo a reprodução determinística de mapas;
+    \item \texttt{[modo]}: Define a estratégia de geração da caverna:
+    \begin{itemize}
+        \item \texttt{soluvel} (padrão): Posiciona $I$ no canto inferior direito e $F$ no canto superior esquerdo, garantindo a viabilidade topológica ($i_F \le i_I$ e $j_F \le j_I$). Além disso, o gerador traça ao menos uma rota com valores neutros ou positivos entre $I$ e $F$, garantindo matematicamente a existência de solução;
+        \item \texttt{impossivel}: Posiciona a saída em um quadrante inalcançável apenas por movimentos para cima e esquerda, ou cerca a rota com monstros de dano letal, testando a resiliência do algoritmo em emitir \texttt{impossível}.
+    \end{itemize}
+\end{itemize}
+
 \section{Resultados}
  
 \subsection{Testes do módulo de leitura}
@@ -827,5 +1055,150 @@ Auditoria Extra 3 & Geração de métricas estatísticas e desenho ASCII no cons
 \end{table}
 
 Os arquivos de entrada utilizados encontram-se disponíveis na pasta \texttt{tp2/testes} do repositório: \texttt{Caverna1.txt}, \texttt{caminho\_escolha.txt} e \texttt{sem\_solucao\_morte.txt}.
+
+\subsection{Testes do módulo de saída e testes integrados (Gabs)}
+
+Para certificar o funcionamento do módulo de saída e a correta orquestração dos módulos integrados, foram conduzidos testes em duas etapas: testes unitários isolados com o utilitário \texttt{teste\_saida} e testes ponta a ponta com o executável principal \texttt{tp2}.
+
+\subsubsection*{Testes unitários de saída (\texttt{teste\_saida})}
+
+O utilitário \texttt{teste\_saida} valida diretamente as operações de \texttt{saida.c}:
+\begin{enumerate}
+    \item \textbf{Gravação de rota viável:} Grava um percurso simulado de 5 coordenadas em arquivo temporário, relê o arquivo e valida linha por linha a formatação \texttt{"linha coluna"};
+    \item \textbf{Gravação de impossibilidade:} Invoca \texttt{resultado\_gravar} com indicador de caminho inexistente e confirma que o arquivo gravado contém estritamente a palavra \texttt{"impossível"} sem linhas espúrias;
+    \item \textbf{Comportamento defensivo:} Verifica a rejeição segura (\texttt{SAIDA\_ERRO\_PARAMETROS}) diante de ponteiros nulos para arquivos ou fluxos de saída.
+\end{enumerate}
+
+Todos os testes unitários do módulo de saída foram executados e aprovados com sucesso.
+
+\subsubsection*{Execução integrada com o mapa do enunciado (\texttt{Caverna1.txt})}
+
+O executável \texttt{tp2} foi executado com o arquivo oficial do trabalho, \texttt{Caverna1.txt}, gerando o arquivo \texttt{resultado.txt}:
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.85\textwidth}
+        \ttfamily\small
+        \begin{tabular}{|l|}
+        \hline
+        \$ ./tp2 testes/Caverna1.txt \\
+        {[SUCESSO]} Rota encontrada! Passos: 7 | HP final maximo: 50 | Gravado em: resultado.txt \\[0.15cm]
+        \$ cat resultado.txt \\
+        3 4 \\
+        2 4 \\
+        2 3 \\
+        2 2 \\
+        2 1 \\
+        1 1 \\
+        1 0 \\
+        \hline
+        \end{tabular}
+    \end{minipage}
+    \vspace{0.2cm}
+    \caption{Execução integrada e conteúdo exato de \texttt{resultado.txt} para \texttt{Caverna1.txt}}
+    \label{fig:exec_caverna1}
+\end{figure}
+
+O resultado confirma que o percurso inicia em $(3,4)$ e termina em $(1,0)$, passando pela célula $(2,4)$ que contém a poção de $+20$, alcançando o HP final de $50$ unidades de vida.
+
+\subsubsection*{Execução com relatório e visualização (\texttt{--verbose})}
+
+Ao adicionar a opção \texttt{--verbose}, o executável exibe no terminal o relatório detalhado e a representação ASCII da caverna:
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.85\textwidth}
+        \ttfamily\small
+        \begin{tabular}{|l|}
+        \hline
+        \$ ./tp2 testes/Caverna1.txt --verbose \\
+        {[SUCESSO]} Rota encontrada! Passos: 7 | HP final maximo: 50 | Gravado em: resultado.txt \\[0.15cm]
+        === Relatorio Detalhado do Percurso (Extra 3) === \\
+        Passo | Coordenada | Movimento | Efeito  | HP Resultante \\
+        ------+------------+-----------+---------+-------------- \\
+        \ \ \ \ 0 | \ \ ( 3, \ 4) | \ INICIO \ \ | \ \ \ -- \ \ | \ \ \ 40 [VIVO] \\
+        \ \ \ \ 1 | \ \ ( 2, \ 4) | \ CIMA \ \ \ \ | \ \ \ \ +20 | \ \ \ 60 [VIVO] \\
+        \ \ \ \ 2 | \ \ ( 2, \ 3) | ESQUERDA \ | \ \ \ \ \ \ 0 | \ \ \ 60 [VIVO] \\
+        \ \ \ \ 3 | \ \ ( 2, \ 2) | ESQUERDA \ | \ \ \ \ \ \ 0 | \ \ \ 60 [VIVO] \\
+        \ \ \ \ 4 | \ \ ( 2, \ 1) | ESQUERDA \ | \ \ \ \ \ \ 0 | \ \ \ 60 [VIVO] \\
+        \ \ \ \ 5 | \ \ ( 1, \ 1) | \ CIMA \ \ \ \ | \ \ \ \ -10 | \ \ \ 50 [VIVO] \\
+        \ \ \ \ 6 | \ \ ( 1, \ 0) | ESQUERDA \ | \ \ F (0) \ | \ \ \ 50 [VIVO] \\
+        ------+------------+-----------+---------+-------------- \\
+        Passos: 7 | HP: 40 -> 50 (Min: 40, Max: 60) | Dano: 10 | Cura: 20 \\[0.15cm]
+        === Visualizacao ASCII da Rota (Extra 3) === \\
+        \ \ \ \ \ \ 0 \ \ 1 \ \ 2 \ \ 3 \ \ 4 \\
+        \ \ \ \ -------------------- \\
+        \ 0 | \ . \ \ . \ \ . \ \ . \ \ . \ | \\
+        \ 1 | [F] \ < \ \ . \ \ . \ \ . \ | \\
+        \ 2 | \ . \ \ \^{} \ \ < \ \ < \ \ < \ | \\
+        \ 3 | \ . \ \ . \ \ . \ \ . \ [I] | \\
+        \ \ \ \ -------------------- \\
+        \hline
+        \end{tabular}
+    \end{minipage}
+    \vspace{0.2cm}
+    \caption{Execução detalhada com relatório analítico e visualização da caverna}
+    \label{fig:exec_verbose}
+\end{figure}
+
+\subsubsection*{Execução em mapa sem solução viável}
+
+Ao processar a caverna \texttt{sem\_solucao\_morte.txt}, onde todas as trajetórias impõem dano letal ao estudante, o programa detecta a inviabilidade e grava exclusivamente a palavra exigida:
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.85\textwidth}
+        \ttfamily\small
+        \begin{tabular}{|l|}
+        \hline
+        \$ ./tp2 testes/sem\_solucao\_morte.txt \\
+        {[SEM SOLUCAO]} Nao ha rota viavel ate a saida F. Gravado "impossível" em 'resultado.txt'. \\[0.15cm]
+        \$ cat resultado.txt \\
+        impossível \\
+        \hline
+        \end{tabular}
+    \end{minipage}
+    \vspace{0.2cm}
+    \caption{Saída gravada em \texttt{resultado.txt} para caso sem solução}
+    \label{fig:exec_sem_solucao}
+\end{figure}
+
+\subsection{Testes com mapas sintéticos gerados (Extra 4)}
+
+Foram geradas três cavernas sintéticas utilizando o utilitário \texttt{gerador} e executadas com o programa principal:
+\begin{enumerate}
+    \item \texttt{mapa\_gerado\_pequeno.txt}: Caverna $5 \times 5$, HP inicial 30, intervalo $[-10, +15]$, semente 101, modo solúvel. A execução encontrou rota ótima de 9 passos com HP final acumulado de 89 pontos;
+    \item \texttt{mapa\_gerado\_medio.txt}: Caverna $20 \times 20$ (400 células), HP inicial 80, intervalo $[-20, +20]$, semente 202, modo solúvel. A Programação Dinâmica encontrou o caminho ótimo de 39 passos com HP final de 467 pontos em menos de 10 milissegundos;
+    \item \texttt{mapa\_gerado\_sem\_solucao.txt}: Caverna $6 \times 6$, HP inicial 10, intervalo $[-50, -10]$, semente 303, modo impossível. A execução confirmou a gravação imediata de \texttt{"impossível"}.
+\end{enumerate}
+
+A Tabela~\ref{tab:testes_integrados} consolida a totalidade dos casos de teste integrados executados com o programa principal:
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Consolidação dos casos de teste integrados do programa principal.}
+\label{tab:testes_integrados}
+\vspace{0.2cm}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{4.2cm}|>{\raggedright\arraybackslash}p{3.8cm}|>{\centering\arraybackslash}p{1.8cm}|>{\centering\arraybackslash}X|}
+\hline
+\textbf{Arquivo de Teste} & \textbf{Configuração / Dimensões} & \textbf{HP Final} & \textbf{Resultado em resultado.txt} \\
+\hline
+\texttt{Caverna1.txt} & $4 \times 5$, HP inicial 40 & 50 & 7 coordenadas ($I \to F$) \\
+\hline
+\texttt{caminho\_escolha.txt} & $3 \times 3$, HP inicial 20 & 70 & 5 coordenadas ($I \to F$) \\
+\hline
+\texttt{sem\_solucao\_morte.txt} & $3 \times 3$, HP inicial 10 & 0 (morte) & \texttt{"impossível"} \\
+\hline
+\texttt{mapa\_gerado\_pequeno.txt} & $5 \times 5$, HP inicial 30 & 89 & 9 coordenadas ($I \to F$) \\
+\hline
+\texttt{mapa\_gerado\_medio.txt} & $20 \times 20$, HP inicial 80 & 467 & 39 coordenadas ($I \to F$) \\
+\hline
+\texttt{mapa\_gerado\_sem\_solucao.txt} & $6 \times 6$, HP inicial 10 & Inviável & \texttt{"impossível"} \\
+\hline
+\end{tabularx}
+\end{table}
+
+Todos os arquivos de teste utilizados encontram-se disponíveis no diretório \texttt{tp2/testes}.
 
 \end{document}
