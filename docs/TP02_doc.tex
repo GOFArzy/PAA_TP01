@@ -145,6 +145,10 @@
 \end{center}
  
 \newpage
+\tableofcontents
+\thispagestyle{fancy}
+
+\newpage
 \setcounter{page}{2}
  
 % =========================================================================
@@ -153,25 +157,25 @@
 
 \section{Introdução}
 
-Esta documentação descreve o projeto desenvolvido no Trabalho Prático 2 da disciplina \textbf{Projeto e Análise de Algoritmos (PAA)}, ministrada na Universidade Federal de Viçosa (UFV) --- Campus Florestal. O trabalho propõe a resolução de um problema de escape de caverna bidimensional por meio do paradigma de \textbf{Programação Dinâmica (DP)}, substituindo a busca exaustiva exponencial por Backtracking utilizada no Trabalho Prático 1.
+Este relatório descreve o Trabalho Prático 2 da disciplina de \textbf{Projeto e Análise de Algoritmos (PAA)}, da Universidade Federal de Viçosa (UFV) --- Campus Florestal. O objetivo foi resolver o problema de escape de uma caverna em grade utilizando o paradigma de \textbf{Programação Dinâmica (DP)}, substituindo a busca exaustiva por Backtracking desenvolvida no TP1 por uma solução de tempo polinomial.
 
-O problema consiste em guiar um estudante através de uma grade retangular $L \times C$ do ponto de entrada $I$ até a saída $F$, maximizando os Pontos de Vida (HP) finais, sem que o HP chegue a zero ou fique negativo em nenhuma célula do percurso. As restrições de movimento são fundamentais: apenas deslocamentos para \textbf{cima} (linha $i \to i-1$) e para a \textbf{esquerda} (coluna $j \to j-1$) são permitidos.
+No problema, um estudante deve percorrer uma grade retangular de dimensões $L \times C$, partindo da posição de entrada $I$ até a saída $F$, buscando terminar com o maior saldo possível de Pontos de Vida (HP). Para sobreviver, o HP nunca pode chegar a zero ou ficar negativo em nenhuma célula do trajeto. As regras de movimentação são restritas: a partir de qualquer ponto, só é permitido andar para \textbf{cima} (linha $i \to i-1$) ou para a \textbf{esquerda} (coluna $j \to j-1$).
 
-\subsubsection*{Modelagem e justificativa da Programação Dinâmica}
+\subsubsection*{Por que usar Programação Dinâmica}
 
-As restrições de movimento transformam a grade em um \textbf{Grafo Acíclico Dirigido (DAG)} implícito: cada célula $(i,j)$ só pode ser alcançada a partir de $(i+1,j)$ (vindo de baixo) ou de $(i,j+1)$ (vindo da direita), garantindo a ausência de ciclos. Essa topologia viabiliza a aplicação de Programação Dinâmica com preenchimento em \textbf{ordem topológica reversa} --- da posição inicial $I$ em direção à saída $F$.
+Como os movimentos são apenas para cima e para a esquerda, a grade funciona naturalmente como um \textbf{Grafo Acíclico Dirigido (DAG)}: cada célula $(i,j)$ só pode ser alcançada a partir de $(i+1,j)$ (vindo de baixo) ou de $(i,j+1)$ (vindo da direita), sem qualquer risco de ciclos. Essa estrutura permite calcular as melhores decisões em \textbf{ordem topológica reversa}, preenchendo a tabela da posição $I$ em direção à saída $F$.
 
-O problema satisfaz os dois pré-requisitos clássicos que justificam o uso da DP:
+O problema se encaixa nos dois pilares da Programação Dinâmica:
 \begin{enumerate}
-    \item \textbf{Subestrutura Ótima:} A solução ótima para alcançar $(i,j)$ com o maior HP possível é construída a partir das soluções ótimas dos vizinhos $(i+1,j)$ e $(i,j+1)$ --- a escolha local do antecessor com maior HP acumulado leva à solução global ótima;
-    \item \textbf{Sobreposição de Subproblemas:} Múltiplos caminhos convergem para a mesma célula intermediária. Sem memoização, recalcular todas as rotas geraria custo exponencial $O(2^{L+C})$; com a tabela de DP, cada célula é resolvida exatamente uma vez.
+    \item \textbf{Subestrutura Ótima:} O maior HP ao alcançar uma célula $(i,j)$ é obtido a partir da melhor escolha entre os caminhos ótimos que chegam aos vizinhos $(i+1,j)$ e $(i,j+1)$, somando o efeito da célula atual;
+    \item \textbf{Sobreposição de Subproblemas:} Como múltiplos percursos passam pelas mesmas células intermediárias, a tabela de DP evita recalcular rotas repetidas, resolvendo cada célula uma única vez.
 \end{enumerate}
 
-A abordagem reduz a complexidade temporal de exponencial (Backtracking do TP1) para \textbf{polinomial estrita}: $\Theta(L \cdot C)$ para o preenchimento da tabela DP e $O(L + C)$ para a reconstrução do caminho ótimo. Para uma grade de $1000 \times 1000$ células, o algoritmo resolve o problema em tempo da ordem de \textbf{milissegundos}, enquanto o Backtracking seria inviável nessa escala.
+Com isso, a complexidade temporal cai de exponencial (no Backtracking do TP1) para \textbf{polinomial}: $\Theta(L \cdot C)$ no preenchimento da tabela e $O(L + C)$ na reconstrução do trajeto. Para grades de grande porte, como $1000 \times 1000$, o tempo de execução fica na casa dos milissegundos.
 
-\subsubsection*{Bibliotecas e tecnologias utilizadas}
+\subsubsection*{Bibliotecas utilizadas}
 
-Foram utilizadas exclusivamente as bibliotecas padrão da linguagem C99: \texttt{stdio.h} para leitura de arquivos e saída formatada, \texttt{stdlib.h} para alocação dinâmica (\texttt{malloc}, \texttt{calloc}, \texttt{free}) e conversão numérica, \texttt{string.h} para comparação de tokens de entrada, \texttt{limits.h} para a constante sentinela \texttt{INT\_MIN}, \texttt{errno.h} para detecção de estouro aritmético na leitura, e \texttt{time.h} para medições de tempo de execução. O projeto foi compilado com \texttt{gcc} seguindo o padrão rigoroso \texttt{-Wall -Wextra -std=c99}, garantindo portabilidade e ausência de avisos em ambientes Linux, macOS e Windows (MinGW).
+O projeto foi desenvolvido em C99 utilizando apenas bibliotecas padrão: \texttt{stdio.h} (leitura de arquivos e saídas), \texttt{stdlib.h} (alocação dinâmica e conversões), \texttt{string.h} (leitura de tokens), \texttt{limits.h} (sentinela \texttt{INT\_MIN}), \texttt{errno.h} (detecção de overflow) e \texttt{time.h} (medições de tempo). O código compila sem avisos usando as opções \texttt{-Wall -Wextra -std=c99}.
 
 % =========================================================================
 % 2. ORGANIZAÇÃO
@@ -179,7 +183,7 @@ Foram utilizadas exclusivamente as bibliotecas padrão da linguagem C99: \texttt
 
 \section{Organização}
 
-O projeto encontra-se versionado no repositório oficial do grupo\footnote{https://github.com/GOFArzy/PAA\_TP01.git}, hospedado na plataforma GitHub, com os módulos desenvolvidos na \textit{branch} \texttt{tp2}. A estrutura de diretórios adotada separa interfaces públicas, implementações, utilitários e instâncias de teste:
+O projeto foi desenvolvido em C99 e versionado no repositório oficial do grupo\footnote{https://github.com/GOFArzy/PAA\_TP01.git} (branch \texttt{tp2}). A estrutura de diretórios separa as interfaces públicas, implementações, utilitários e instâncias de teste:
 
 \begin{figure}[htbp]
     \centering
@@ -371,12 +375,12 @@ A leitura percorre cada uma das $L \times C$ células uma única vez, realizando
  
 \subsubsection*{Extra 1: Resumo Estatístico e Visualização da Caverna (Tomás)}
 
-Como primeira funcionalidade diferencial desenvolvida por Tomás para apoiar o módulo do mapa e a análise da entrada, foram implementadas as funções \texttt{mapa\_resumo} e \texttt{mapa\_imprimir}, mantendo a simplicidade e a portabilidade do código:
+Como funcionalidade extra desenvolvida por Tomás para apoiar a leitura do mapa, foram implementadas as funções \texttt{mapa\_resumo} e \texttt{mapa\_imprimir}:
 \begin{itemize}
-    \item \textbf{Resumo Estatístico (`mapa\_resumo'):} Realiza uma varredura sobre a caverna quantificando o total de monstros ($v < 0$) e a soma de dano por eles causado, o total de poções ($v > 0$) e a cura acumulada correspondente, além do número de células neutras ($v = 0$), permitindo uma rápida auditoria da severidade da caverna antes da resolução;
-    \item \textbf{Visualização da Caverna (`mapa\_imprimir'):} Imprime a matriz no console com alinhamento tabular fixo e destaque textual para a entrada \texttt{I} e a saída \texttt{F}.
+    \item \textbf{Resumo Estatístico (\texttt{mapa\_resumo}):} Percorre a caverna contabilizando a quantidade de monstros ($v < 0$) e o total de dano, o número de poções ($v > 0$) e a cura acumulada, além das células neutras ($v = 0$). Isso permite ter um panorama do mapa antes da execução;
+    \item \textbf{Visualização da Caverna (\texttt{mapa\_imprimir}):} Imprime a matriz no terminal de forma formatada e alinhada, com marcações visíveis para a entrada \texttt{I} e a saída \texttt{F}.
 \end{itemize}
-Ambas as funções operam com complexidade temporal $\mathcal{O}(L \times C)$ e consumo de espaço auxiliar estritamente $\mathcal{O}(1)$, sendo acionadas pelo modo \texttt{--verbose} da aplicação principal.
+Ambas as funções operam em tempo $\mathcal{O}(L \times C)$ e memória auxiliar $\mathcal{O}(1)$, sendo acionadas quando o programa é executado com a opção \texttt{--verbose}.
 
 % =========================================================================
 % Programação Dinâmica
@@ -384,43 +388,35 @@ Ambas as funções operam com complexidade temporal $\mathcal{O}(L \times C)$ e 
 
 \subsection{``dp.c'' e ``dp.h''}
 
-O módulo de programação dinâmica é responsável por determinar a rota que maximiza os Pontos de Vida finais do estudante ao escapar da caverna, além de identificar se existe ao menos um caminho viável que permita alcançar a saída \texttt{F} sem que a vida chegue a zero ou a valores negativos. Foram utilizadas as bibliotecas \texttt{<stdio.h>} para operações de entrada e saída, \texttt{<stdlib.h>} para alocação e liberação dinâmica de memória, e \texttt{<limits.h>} para o uso da constante \texttt{INT\_MIN}, empregada como sentinela de células inacessíveis. Os arquivos que compõem o módulo são \texttt{include/dp.h} (interface pública) e \texttt{src/dp.c} (implementação dos algoritmos).
+O módulo de programação dinâmica é responsável por determinar o trajeto que leva o estudante de \texttt{I} até \texttt{F} com o maior saldo final de HP, garantindo vida positiva em cada passo. Caso não exista nenhum caminho viável, o módulo indica que a saída é inalcançável. Foram utilizadas as bibliotecas \texttt{stdio.h}, \texttt{stdlib.h} e \texttt{limits.h} (para a constante sentinela \texttt{INT\_MIN}). Os arquivos do módulo são \texttt{include/dp.h} (interface) e \texttt{src/dp.c} (implementação).
 
 \subsubsection*{Princípio da Programação Dinâmica e relação de recorrência}
 
-O problema consiste em conduzir o personagem da posição inicial \texttt{I} até a saída \texttt{F}. Pelas regras estabelecidas, a partir de qualquer célula $(i,j)$ os únicos movimentos permitidos são para \textbf{cima} (linha $i-1$) e para a \textbf{esquerda} (coluna $j-1$). Dessa forma, para que o estudante alcance a célula $(i,j)$, o passo imediatamente anterior deve ter ocorrido obrigatoriamente a partir de $(i+1,j)$ (movimento para cima vindo da linha de baixo) ou de $(i,j+1)$ (movimento para a esquerda vindo da coluna à direita).
+Como os movimentos permitidos são apenas para cima ($i-1$) e para a esquerda ($j-1$), qualquer célula $(i,j)$ só pode ser atingida a partir do vizinho de baixo $(i+1,j)$ ou do vizinho da direita $(i,j+1)$.
 
-O problema exibe as duas características fundamentais que justificam o uso de Programação Dinâmica:
-\begin{enumerate}
-    \item \textbf{Subestrutura Ótima:} O maior valor de Pontos de Vida acumulado ao alcançar uma célula $(i,j)$ pode ser decomposto na escolha ótima entre os estados antecessores viáveis $(i+1,j)$ e $(i,j+1)$, acrescido da variação de vida da própria célula $(i,j)$;
-    \item \textbf{Sobreposição de Subproblemas:} Diferentes trajetórias que partem de \texttt{I} convergem para as mesmas células intermediárias da caverna. Em vez de reavaliar recursivamente essas rotas múltiplas vezes (o que levaria a uma árvore exponencial), a tabela armazena a melhor solução para cada célula assim que é calculada.
-\end{enumerate}
-
-Sendo $\text{DP}[i][j]$ o valor máximo de Pontos de Vida com que o estudante ingressa na célula $(i,j)$, e $\text{valor}[i][j]$ a alteração de HP conferida por essa célula, a relação de recorrência que governa o preenchimento da tabela é:
+Sendo $\text{DP}[i][j]$ o maior valor de HP com que o estudante chega na célula $(i,j)$, e $\text{valor}[i][j]$ a variação de HP dessa célula, a relação de recorrência é definida por:
 
 \begin{equation}
 \text{DP}[i][j] = \max\Big(\text{DP}[i+1][j],\; \text{DP}[i][j+1]\Big) + \text{valor}[i][j]
 \label{eq:recorrencia_dp}
 \end{equation}
 
-sob as seguintes condições de contorno e restrições de viabilidade:
+com as seguintes condições:
 \begin{itemize}
-    \item \textbf{Caso Base:} Na posição inicial $I = (i_I, j_I)$, o valor é inicializado diretamente com o HP fornecido pelo arquivo de entrada:
+    \item \textbf{Caso Base:} Na célula inicial, o valor é o HP de entrada:
     $$\text{DP}[i_I][j_I] = \text{hp\_inicial}$$
-    \item \textbf{Condição de Vida Positiva para Transição:} Um movimento a partir de um vizinho só é considerado se o personagem estiver vivo naquela célula, ou seja, $\text{DP}[i+1][j] > 0$ ou $\text{DP}[i][j+1] > 0$. Vizinhos não visitados ou onde houve morte contêm \texttt{INT\_MIN} e são desconsiderados;
-    \item \textbf{Sobrevivência na Célula Atual:} Caso o valor resultante da transição $\text{DP}[i][j] \le 0$, o estudante perece naquela sala, tornando-a inviável como ponto de passagem. Nesses casos, o valor não é consolidado como rota válida e o estado permanece como inacessível.
+    \item \textbf{Condição de Vida Positiva:} Um movimento só é considerado se o estudante estiver vivo no vizinho de origem ($\text{DP} > 0$). Células não visitadas ou onde houve morte contêm \texttt{INT\_MIN} e são ignoradas;
+    \item \textbf{Sobrevivência na Célula Atual:} Se o HP resultante na célula for menor ou igual a zero ($\text{DP}[i][j] \le 0$), o estudante morre ali e a posição é descartada como rota válida.
 \end{itemize}
 
-\subsubsection*{Ordem topológica de preenchimento}
+\subsubsection*{Ordem de preenchimento}
 
-Como a transição da célula $(i,j)$ depende dos valores já computados em $(i+1,j)$ e $(i,j+1)$, o algoritmo deve resolver primeiro as linhas inferiores e colunas à direita. O algoritmo inicia na linha de \texttt{I} e percorre a matriz em sentido decrescente:
-
+Como o cálculo de $(i,j)$ depende de $(i+1,j)$ e $(i,j+1)$, a matriz é percorrida em sentido decrescente de linhas e colunas:
 \begin{itemize}
-    \item O laço externo itera a linha $i$ de $i_I$ até $0$ (de baixo para cima);
-    \item O laço interno itera a coluna $j$ de $j_I$ até $0$ (da direita para a esquerda).
+    \item O laço externo itera a linha $i$ de $i_I$ até 0 (de baixo para cima);
+    \item O laço interno itera a coluna $j$ de $j_I$ até 0 (da direita para a esquerda).
 \end{itemize}
-
-Dessa forma, no momento em que qualquer célula $(i,j)$ é avaliada, suas dependências $(i+1,j)$ e $(i,j+1)$ já foram completamente resolvidas e memorizadas na tabela.
+Assim, ao avaliar qualquer célula, os dois vizinhos de onde o estudante poderia ter vindo já estão calculados.
 
 \subsubsection*{Estruturas de dados}
 
@@ -511,22 +507,22 @@ for (i = il; i >= 0; i--) {
 
 \subsubsection*{Extra 2: Contagem de Caminhos Ótimos e Visualização da Tabela DP (Tomás)}
 
-Para enriquecer a análise do algoritmo de Programação Dinâmica sem recorrer a estruturas complexas que fujam do escopo da disciplina, foram introduzidos dois recursos simples e naturais:
+Como funcionalidade extra desenvolvida por Tomás para enriquecer a resolução por DP, foram implementados dois recursos simples:
 \begin{itemize}
-    \item \textbf{Contagem de Caminhos Ótimos Empatados:} Durante a avaliação de cada célula $(i,j)$, se tanto a transição vinda de baixo quanto a vinda da direita resultarem no mesmo valor ótimo de HP acumulado, o número de caminhos viáveis até aquela célula é dado pela soma das formas de alcançar ambos os antecessores:
+    \item \textbf{Contagem de Caminhos Ótimos Empatados:} Se tanto o vizinho de baixo quanto o da direita permitirem chegar com o mesmo HP máximo acumulado, a célula soma a quantidade de formas de chegar por ambos:
     $$\text{caminhos}[i][j] = \text{caminhos}[i+1][j] + \text{caminhos}[i][j+1]$$
-    Caso um dos vizinhos seja estritamente superior, a célula apenas herda a contagem desse vizinho ótimo. Ao término, o membro \texttt{caminhos\_otimos} registra a quantidade de rotas de HP máximo até a saída $F$;
-    \item \textbf{Visualização da Tabela de Memoização (`dp\_imprimir\_tabela'):} Renderiza no console a matriz $L \times C$ de Programação Dinâmica com os valores de HP máximo de cada célula ou o símbolo \texttt{-} para posições inacessíveis, viabilizando a auditoria didática das decisões de Bellman.
+    Se um vizinho for estritamente melhor, herda apenas os caminhos dele. Ao final, o campo \texttt{caminhos\_otimos} da solução guarda quantas rotas de HP máximo existem até a saída \texttt{F};
+    \item \textbf{Visualização da Tabela DP (\texttt{dp\_imprimir\_tabela}):} Exibe no terminal a matriz com o melhor HP de cada célula (ou o caractere \texttt{-} se for inalcançável), permitindo inspecionar o resultado no modo \texttt{--verbose}.
 \end{itemize}
 
-\textbf{`dp\_liberar'}: Desaloca com segurança as matrizes dinâmicas da solução (\texttt{melhor\_hp}, \texttt{pai} e \texttt{num\_caminhos}) chamando as rotinas de liberação, zera todos os ponteiros para \texttt{NULL} e reseta os contadores da estrutura, permitindo que a função seja invocada repetidas vezes sem risco de falha de segmentação (\textit{double free}).
+\textbf{`dp\_liberar'}: Libera a memória das matrizes \texttt{melhor\_hp}, \texttt{pai} e \texttt{num\_caminhos}, zera os ponteiros e reseta a estrutura \texttt{Solucao}.
 
 \textbf{Decisões de implementação:}
 \begin{enumerate}
-    \item \textbf{Diferenciação entre célula inalcançável e morte:} Ao utilizar \texttt{INT\_MIN} como valor sentinela, distingue-se com exatidão uma célula que nunca pôde ser alcançada por nenhuma rota daquelas em que o personagem alcança mas tem vida nula ou negativa ($\le 0$).
-    \item \textbf{Prevenção contra transições a partir de personagens mortos:} A condicional \texttt{melhor\_hp[...] > 0} garante que caminhos onde o estudante morre não continuem a ser propagados na tabela, respeitando rigorosamente a restrição de que a vida deve ser sempre positiva.
-    \item \textbf{Gravação implícita de predecessores para reconstrução:} O registro da coordenada de origem em \texttt{pai[i][j]} durante o próprio preenchimento descarta a necessidade de manter pilhas de busca ou executar nova exploração retroativa comparando diferenças de valores, reduzindo a complexidade de recuperação do percurso para tempo linear estrito.
-    \item \textbf{Robustez e tratamento defensivo:} Caso ponteiros nulos sejam fornecidos ou as coordenadas de início/fim estejam fora dos limites do mapa, a rotina aborta a resolução de forma controlada devolvendo código de erro sem interrupções abruptas (\textit{crash}).
+    \item \textbf{Sentinela \texttt{INT\_MIN}:} Permite distinguir células que nunca foram visitadas daquelas em que o estudante chegou mas morreu ($\text{HP} \le 0$).
+    \item \textbf{Propagação com vida positiva:} A checagem $\text{HP} > 0$ garante que o personagem nunca continue se movimentando após a morte.
+    \item \textbf{Matriz de predecessores (\texttt{pai}):} Guardar de onde veio o melhor caminho diretamente na DP evita ter que recalcular ou buscar a rota depois, permitindo reconstruir o trajeto em tempo linear.
+    \item \textbf{Alocação segura com \texttt{calloc}:} Caso a alocação de alguma linha falhe, as linhas já alocadas são liberadas imediatamente, sem vazamento de memória.
 \end{enumerate}
 
 \subsubsection*{Gerenciamento de memória}
@@ -561,11 +557,11 @@ A estrutura \texttt{Solucao} reside normalmente na pilha da função chamadora, 
 
 \subsubsection*{Complexidade}
 
-A função \texttt{dp\_resolver} visita cada uma das $L \times C$ células no máximo uma vez. Em cada célula, são realizadas no máximo duas consultas a vizinhos adjacentes, comparações de inteiros e uma soma aritmética, todas operações de custo elementar $\mathcal{O}(1)$. Portanto, a complexidade de tempo de resolução por Programação Dinâmica é rigorosamente:
+A função \texttt{dp\_resolver} visita cada uma das $L \times C$ células uma única vez. Para cada célula, realiza no máximo duas verificações de vizinhos e uma soma aritmética, que são operações de custo $\mathcal{O}(1)$. Com isso, a complexidade de tempo é:
 $$\mathcal{O}(L \times C)$$
-Em termos de espaço, são alocadas duas matrizes de dimensão $L \times C$ (\texttt{melhor\_hp} de inteiros e \texttt{pai} de estruturas \texttt{Coordenada}), além dos vetores auxiliares de ponteiros de dimensão $L$, totalizando complexidade espacial de:
+Em relação ao espaço, são alocadas as matrizes de tamanho $L \times C$ para armazenar o melhor HP, os predecessores e a contagem de caminhos, além dos vetores de ponteiros, totalizando:
 $$\mathcal{O}(L \times C)$$
-A liberação de memória em \texttt{dp\_liberar} percorre as $L$ linhas das duas matrizes, demandando tempo $\mathcal{O}(L)$ e espaço adicional $\mathcal{O}(1)$.
+A liberação de memória em \texttt{dp\_liberar} percorre as linhas das matrizes, consumindo tempo $\mathcal{O}(L)$ e memória auxiliar $\mathcal{O}(1)$.
 
 % =========================================================================
 % Reconstrução e validação do caminho
@@ -1376,28 +1372,28 @@ Os dados confirmam a complexidade te\'{o}rica $\Theta(L \cdot C)$: ao quadruplic
 % 5. CONCLUSAO
 % =========================================================================
 
-\section{Conclus\~{a}o}
+\section{Conclusão}
 
-O Trabalho Pr\'{a}tico 2 demonstrou com \^{e}xito a aplica\c{c}\~{a}o do paradigma de \textbf{Programa\c{c}\~{a}o Din\^{a}mica} na resolu\c{c}\~{a}o de um problema de otimiza\c{c}\~{a}o combinat\'{o}ria com restri\c{c}\~{o}es de viabilidade. A modelagem da caverna como um Grafo Ac\'{i}clico Dirigido (DAG) impl\'{i}cito --- induzido pelos movimentos exclusivamente para cima e para a esquerda --- permitiu identificar uma ordem topol\'{o}gica natural de preenchimento da tabela de memoriza\c{c}\~{a}o, eliminando completamente a sobreposi\c{c}\~{a}o de subproblemas que tornaria exponencial qualquer abordagem baseada em busca exaustiva.
+O Trabalho Prático 2 permitiu aplicar na prática o paradigma de \textbf{Programação Dinâmica}, evidenciando o impacto da escolha correta de algoritmo. Ao modelar a caverna como um DAG implícito e preencher a tabela em ordem topológica reversa, o problema de encontrar a rota de maior HP foi reduzido de uma busca exaustiva exponencial (Backtracking do TP1) para uma solução de tempo polinomial $\Theta(L \cdot C)$. Isso tornou possível resolver instâncias com um milhão de células em menos de 100\,ms.
 
-A implementa\c{c}\~{a}o modular em C99 cumpriu integralmente os requisitos do enunciado:
+A implementação modular em C99 atendeu a todos os requisitos do projeto:
 \begin{itemize}
-    \item O m\'{o}dulo \texttt{mapa} realiza leitura defensiva do arquivo de entrada com valida\c{c}\~{a}o de overflow, tokens inv\'{a}lidos e unicidade de \texttt{I}/\texttt{F};
-    \item O m\'{o}dulo \texttt{dp} preenche a tabela DP em tempo $\Theta(L \cdot C)$, garantindo a condi\c{c}\~{a}o de vida positiva estrita ($\text{HP} > 0$) em cada transi\c{c}\~{a}o;
-    \item O m\'{o}dulo \texttt{caminho} reconstr\'{o}i o percurso \'{o}timo em tempo $O(L + C)$ e o audita sob cinco crit\'{e}rios formais de legalidade;
-    \item O m\'{o}dulo \texttt{saida} grava \texttt{resultado.txt} estritamente conforme o formato exigido (coordenadas \textit{zero-based} ou a palavra ``imposs\'{i}vel'');
-    \item O \texttt{Makefile} automatiza a compila\c{c}\~{a}o multiplataforma sem advert\^{e}ncias com as \textit{flags} \texttt{-Wall -Wextra}.
+    \item O módulo \texttt{mapa} realiza a leitura e validação defensiva do arquivo de entrada;
+    \item O módulo \texttt{dp} calcula a rota ótima com garantia de sobrevivência estrita ($\text{HP} > 0$);
+    \item O módulo \texttt{caminho} reconstrói o percurso e audita a rota sob critérios formais de legalidade;
+    \item O módulo \texttt{saida} grava o arquivo \texttt{resultado.txt} no formato padronizado;
+    \item O \texttt{Makefile} automatiza a compilação sem avisos (\texttt{-Wall -Wextra}).
 \end{itemize}
 
-Além dos requisitos obrigatórios, o grupo implementou quatro diferenciais integrados:
+Além do escopo obrigatório, o grupo implementou quatro funcionalidades extras:
 \begin{itemize}
-    \item \textbf{Extra 1 --- Resumo Estatístico e Visualização da Caverna (Tomás):} Rotinas que computam a severidade do mapa (contagem de monstros, poções, dano/cura acumulados) e imprimem a grade tabular com alinhamento e marcações de entrada e saída;
-    \item \textbf{Extra 2 --- Contagem de Caminhos Ótimos e Tabela DP (Tomás):} Rastreamento de multiplicidade de rotas ótimas por soma combinatória de subproblemas empatados e renderização didática da matriz de memoização de Bellman;
-    \item \textbf{Extra 3 --- Visualizador ASCII e Auditoria Estatística da Rota (Otávio):} Exibição tabular passo a passo da evolução de HP, métricas de dano/cura e renderização gráfica do mapa com setas direcionais, acessível via \texttt{--verbose};
-    \item \textbf{Extra 4 --- Gerador Parametrizável de Mapas (Gabriel):} Utilitário independente \texttt{gerador} que cria instâncias arbitrárias de caverna com semente reprodutível, garantindo ou impedindo solução conforme o modo especificado.
+    \item \textbf{Extra 1 (Tomás):} Resumo estatístico da caverna (contagem de monstros, poções, dano e cura) e visualização formatada do mapa;
+    \item \textbf{Extra 2 (Tomás):} Contagem de múltiplos caminhos ótimos empatados e exibição da tabela de DP;
+    \item \textbf{Extra 3 (Otávio):} Visualizador em arte ASCII do caminho percorrido e métricas passo a passo no modo \texttt{--verbose};
+    \item \textbf{Extra 4 (Gabriel):} Gerador configurável de mapas de caverna com semente reprodutível.
 \end{itemize}
 
-Os resultados experimentais confirmaram a complexidade assint\'{o}tica te\'{o}rica: o tempo cresce linearmente com $L \times C$, sendo inferior a 100\,ms mesmo para grades de $1000 \times 1000$. Isso contrasta radicalmente com o Backtracking exponencial do TP1. Em s\'{i}ntese, o trabalho atingiu plenamente os objetivos pedag\'{o}gicos da disciplina: demonstrar que a escolha correta do paradigma algor\'{i}tmico transforma um problema intrat\'{a}vel em um problema eficientemente resolv\'{i}vel, com ganho de desempenho de v\'{a}rias ordens de grandeza.
+Por fim, os testes experimentais comprovaram o comportamento linear em relação ao número de células da grade, demonstrando a robustez e eficiência da solução desenvolvida.
 
 % =========================================================================
 % 6. REFERENCIAS
