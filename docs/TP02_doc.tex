@@ -455,7 +455,189 @@ Em termos de espaço, são alocadas duas matrizes de dimensão $L \times C$ (\te
 $$\mathcal{O}(L \times C)$$
 A liberação de memória em \texttt{dp\_liberar} percorre as $L$ linhas das duas matrizes, demandando tempo $\mathcal{O}(L)$ e espaço adicional $\mathcal{O}(1)$.
 
+% =========================================================================
+% Reconstrução e validação do caminho
+% =========================================================================
 
+\subsection{``caminho.c'' e ``caminho.h''}
+
+O módulo de reconstrução e validação do caminho é responsável por transformar as decisões computadas pela Programação Dinâmica em uma sequência ordenada de coordenadas temporais partindo da entrada \texttt{I} até a saída \texttt{F}, além de auditar formalmente a legalidade e a viabilidade do percurso antes de sua gravação em disco. Foram utilizadas as bibliotecas \texttt{<stdio.h>} para operações de escrita e formatação e \texttt{<stdlib.h>} para alocação dinâmica do vetor de posições. Os arquivos que compõem este componente são \texttt{include/caminho.h} (interface pública e declaração de tipos), \texttt{src/caminho.c} (implementação dos algoritmos de busca retroativa e validação) e \texttt{testes/teste\_caminho.c} (programa de teste de unidade e robustez).
+
+\subsubsection*{Princípio da reconstrução do percurso}
+
+O algoritmo de Programação Dinâmica preenche a matriz de antecessores $\text{pai}[i][j]$, registrando para cada célula a posição de onde o estudante veio para atingir o maior HP viável. Como os movimentos válidos durante a exploração direta da caverna são unicamente para \textbf{cima} e para a \textbf{esquerda}, o retorno retroativo (\textit{backtracking}) a partir da saída \texttt{F} realiza o trajeto inverso: mover-se para a célula registrada como predecessor (que necessariamente estará abaixo ou à direita da célula atual) até reencontrar o ponto de origem \texttt{I}.
+
+O processo é executado em duas etapas sequenciais:
+\begin{enumerate}
+    \item \textbf{Contagem de passos e verificação de integridade:} Partindo de $(\text{fim\_linha}, \text{fim\_coluna})$, o algoritmo percorre a cadeia de ponteiros/coordenadas em \texttt{pai} contabilizando a quantidade $K$ de células que compõem o caminho. Durante este laço, adota-se uma cota superior defensiva de segurança ($K \le L + C + 2$ passos); caso o laço ultrapasse esse limite ou encontre predecessores sentinela $(-1,-1)$ antes de atingir \texttt{I}, aborta-se imediatamente a operação, reportando ausência de rota válida;
+    \item \textbf{Alocação e inversão cronológica:} Aloca-se dinamicamente na \textit{Heap} um vetor contíguo de $K$ estruturas \texttt{Coordenada}. Para entregar a rota na ordem cronológica de percurso ($\texttt{I} \to \dots \to \texttt{F}$), o preenchimento do vetor é realizado de trás para frente: a saída \texttt{F} é gravada no índice final $K-1$, o seu antecessor no índice $K-2$, e assim sucessivamente até que a entrada \texttt{I} ocupe a primeira posição (índice $0$).
+\end{enumerate}
+
+\subsubsection*{Validação defensiva do caminho}
+
+Para garantir que nenhuma inconsistência de cálculo ou corrupção de memória gere caminhos ilegais, a função \texttt{caminho\_validar} atua como um inspetor independente que audita todo o vetor de coordenadas sob cinco critérios rígidos:
+\begin{itemize}
+    \item \textbf{Conformidade dos Extremos:} A primeira coordenada $\text{caminho}[0]$ deve coincidir rigorosamente com $(\text{inicio\_linha}, \text{inicio\_coluna})$ e a última $\text{caminho}[K-1]$ com $(\text{fim\_linha}, \text{fim\_coluna})$;
+    \item \textbf{Legalidade Estrita dos Movimentos:} Para cada transição consecutiva entre o passo $k-1$ e o passo $k$ ($1 \le k < K$), calcula-se a variação espacial $\Delta l = \text{linha}_k - \text{linha}_{k-1}$ e $\Delta c = \text{coluna}_k - \text{coluna}_{k-1}$. O passo só é homologado se for estritamente um deslocamento para cima ($\Delta l = -1 \land \Delta c = 0$) ou para a esquerda ($\Delta l = 0 \land \Delta c = -1$). Qualquer tentativa de deslocamento diagonal, passo duplo ou recuo (para baixo ou direita) resulta no código de falha \texttt{CAMINHO\_INVALIDO\_MOVIMENTO};
+    \item \textbf{Limites da Caverna:} Todas as células devem respeitar $0 \le \text{linha} < L$ e $0 \le \text{coluna} < C$;
+    \item \textbf{Sobrevivência Contínua do Estudante:} O saldo de HP é simulado passo a passo a partir de $\text{hp\_inicial}$. A cada célula intermediária adentrada, soma-se o seu valor numérico; se em qualquer etapa o saldo resultante for nulo ou negativo ($\text{HP} \le 0$), a rota é rejeitada com \texttt{CAMINHO\_INVALIDO\_MORTE}, cumprindo a regra de que zero também configura morte.
+\end{itemize}
+
+\subsubsection*{Estruturas de dados}
+
+O cabeçalho \texttt{include/caminho.h} define o tipo fundamental de representação posicional e os códigos de erro padronizados do módulo:
+
+\begin{lstlisting}[language=C, caption={Estrutura Coordenada e assinaturas públicas do módulo caminho.}]
+typedef struct {
+    int linha;
+    int coluna;
+} Coordenada;
+
+int caminho_reconstruir(const Mapa *mapa, const Solucao *solucao,
+                        Coordenada **caminho, int *quantidade);
+int caminho_validar(const Mapa *mapa, const Coordenada *caminho, int quantidade);
+void caminho_liberar(Coordenada *caminho);
+\end{lstlisting}
+
+Os códigos de retorno permitem ao módulo integrador identificar com precisão a causa de eventuais inconsistências:
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Códigos de retorno do módulo de reconstrução e validação do caminho.}
+\label{tab:codigos_caminho}
+\vspace{0.2cm}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{5.5cm}|c|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{Constante} & \textbf{Valor} & \textbf{Significado} \\
+\hline
+\texttt{CAMINHO\_OK} & 0 & Caminho reconstruído ou validado com sucesso \\
+\hline
+\texttt{CAMINHO\_ERRO\_PARAMETROS} & $-1$ & Ponteiro nulo ou argumentos inconsistentes \\
+\hline
+\texttt{CAMINHO\_ERRO\_MEMORIA} & $-2$ & Falha na alocação dinâmica na \textit{Heap} \\
+\hline
+\texttt{CAMINHO\_SEM\_SOLUCAO} & $-3$ & DP indicou ausência de rota ou F inalcançável \\
+\hline
+\texttt{CAMINHO\_INVALIDO\_INICIO} & $-4$ & Trajeto não inicia na coordenada de \texttt{I} \\
+\hline
+\texttt{CAMINHO\_INVALIDO\_FIM} & $-5$ & Trajeto não finaliza na coordenada de \texttt{F} \\
+\hline
+\texttt{CAMINHO\_INVALIDO\_MOVIMENTO} & $-6$ & Passo proibido (diagonal, recuo ou salto) \\
+\hline
+\texttt{CAMINHO\_INVALIDO\_MORTE} & $-7$ & HP atingiu zero ou valor negativo durante a rota \\
+\hline
+\texttt{CAMINHO\_INVALIDO\_LIMITES} & $-8$ & Coordenada fora do intervalo $[0,L-1] \times [0,C-1]$ \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsubsection*{Funções e implementação}
+
+\textbf{`caminho\_reconstruir'}: Verifica inicialmente se a solução é viável ($\text{existe\_caminho} = 1$ e $\text{melhor\_hp}[\text{fim}] > 0$). Caso contrário, zera os ponteiros de saída e retorna \texttt{CAMINHO\_SEM\_SOLUCAO}. Realiza a contagem dos passos por retrocesso guiado pela tabela \texttt{solucao->pai}, aloca o vetor de tamanho $K$ e insere cada nó em ordem reversa, disponibilizando o vetor cronológico pronto para escrita ou validação.
+
+\begin{lstlisting}[language=C, caption={Preenchimento reverso do vetor ordenado em caminho\_reconstruir.}]
+/* Aloca vetor e preenche de tras para frente (ordem cronologica I -> F) */
+Coordenada *vet = (Coordenada *)malloc((size_t)cont * sizeof(Coordenada));
+if (vet == NULL)
+    return CAMINHO_ERRO_MEMORIA;
+
+atual.linha = fl; atual.coluna = fc;
+int idx = cont - 1;
+vet[idx] = atual;
+
+while (atual.linha != il || atual.coluna != ic) {
+    atual = solucao->pai[atual.linha][atual.coluna];
+    idx--;
+    vet[idx] = atual;
+}
+
+*caminho = vet;
+*quantidade = cont;
+return CAMINHO_OK;
+\end{lstlisting}
+
+\textbf{`caminho\_validar'}: Executa a inspeção sequencial sobre o vetor fornecido, assegurando que todas as restrições físicas e fisiológicas do problema sejam obedecidas sem exceção.
+
+\textbf{`caminho\_liberar'}: Libera a memória concedida para o vetor de coordenadas e evita referências pendentes na aplicação.
+
+\textbf{Decisões de implementação:}
+\begin{enumerate}
+    \item \textbf{Inversão \textit{in-place} durante a alocação:} Ao atribuir os elementos no vetor dinâmico iniciando no índice $K-1$ em sentido decrescente até $0$, a ordenação cronológica direta $I \to F$ é obtida naturalmente sem a necessidade de pilhas auxiliares, filas ou cópias secundárias de memória;
+    \item \textbf{Proteção contra ciclos:} O monitoramento do limite máximo de saltos ($K \le L + C + 2$) blinda o algoritmo contra laços infinitos provocados por eventuais dados inválidos;
+    \item \textbf{Separação entre reconstrução e persistência:} O módulo não interage diretamente com o sistema de arquivos (\texttt{resultado.txt}), mantendo-se como uma biblioteca pura de manipulação de coordenadas e facilitando a realização de testes unitários automatizados.
+\end{enumerate}
+
+\subsubsection*{Gerenciamento de memória}
+
+A função \texttt{caminho\_reconstruir} aloca um único bloco contíguo na \textit{Heap} proporcional ao comprimento da rota $K$. O chamador recebe o endereço em um ponteiro duplo (\texttt{Coordenada **caminho}) e assume a posse desse recurso, sendo responsável por invocar \texttt{caminho\_liberar} após o uso. A Figura~\ref{fig:memoria_caminho} esquematiza a disposição da memória para o caso \texttt{Caverna1.txt}:
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.75\textwidth}
+        \ttfamily\small
+        \begin{tabular}{|l|}
+        \hline
+        Pilha da funcao chamadora \\
+        \quad Coordenada *caminho ----+ \\
+        \quad int quantidade = 7      | \\
+        \hline
+        Heap (bloco contiguo alocado via malloc, 7 x sizeof(Coordenada)) \\
+        \quad +--> [ (3,4) | (2,4) | (2,3) | (2,2) | (2,1) | (1,1) | (1,0) ] \\
+        \quad \quad \quad \ \ \^ \quad \quad \quad \quad \quad \quad \quad \quad \quad \quad \quad \quad \quad \quad \ \ \^ \\
+        \quad \quad \quad \ \ I (passo 0) \quad \quad \quad \quad \quad \quad \quad \quad \quad \quad \quad F (passo 6) \\
+        \hline
+        \end{tabular}
+    \end{minipage}
+    \vspace{0.2cm}
+    \caption{Alocação linear do caminho na Heap para o exemplo \texttt{Caverna1.txt}}
+    \label{fig:memoria_caminho}
+\end{figure}
+
+\subsubsection*{Complexidade}
+
+Como cada passo de retrocesso segue diretamente a coordenada apontada por \texttt{pai[i][j]}, cada nó da rota é visitado exatamente duas vezes (uma para contagem e outra para gravação). O comprimento do caminho $K$ em uma grade retangular movendo-se apenas para cima e para a esquerda é rigorosamente delimitado por $K \le L + C - 1$. Logo, a complexidade temporal da reconstrução é linear em relação ao tamanho da rota:
+$$\mathcal{O}(K) = \mathcal{O}(L + C)$$
+A complexidade de espaço reside na alocação de $K$ registros \texttt{Coordenada}, consumindo $\mathcal{O}(K)$ de memória na \textit{Heap}. A função \texttt{caminho\_validar} inspeciona os $K$ passos realizando operações elementares por salto, apresentando tempo $\mathcal{O}(K)$ e consumo de espaço auxiliar $\mathcal{O}(1)$. A desalocação em \texttt{caminho\_liberar} opera em tempo constante $\mathcal{O}(1)$.
+
+% =========================================================================
+% EXTRA 3: Funcionalidade inventada pelo grupo
+% =========================================================================
+
+\subsection{Extra 3: Visualizador Gráfico ASCII e Auditoria Estatística da Rota}
+
+Em cumprimento à tarefa diferencial descrita na Seção~13.3 do planejamento (funcionalidade inventada pelo grupo, sob coordenação da Pessoa~3), desenvolveu-se uma ferramenta de simulação estatística e renderização gráfica em arte ASCII da caverna e do percurso encontrado. A proposta visa enriquecer a análise do algoritmo de Programação Dinâmica, viabilizando a auditoria visual do caminho ótimo e o acompanhamento detalhado da evolução dos Pontos de Vida ao longo da exploração, sem violar a especificação do arquivo obrigatório \texttt{resultado.txt}.
+
+\subsubsection*{Especificação e estruturas de dados}
+
+A funcionalidade foi concebida de forma modular dentro do próprio subsistema de rotas (\texttt{caminho.h} e \texttt{caminho.c}), organizando-se em três serviços:
+
+\begin{lstlisting}[language=C, caption={Estrutura de metricas e funcoes do Extra 3.}]
+typedef struct {
+    int passos;         /* quantidade total de celulas percorridas */
+    int hp_inicial;     /* vida na entrada I */
+    int hp_final;       /* vida acumulada ao alcancar F */
+    int hp_minimo;      /* menor HP atingido durante toda a travessia */
+    int hp_maximo;      /* maior HP alcancado durante toda a travessia */
+    int dano_total;     /* soma absoluta de todas as perdas por monstros */
+    int cura_total;     /* soma acumulada de ganho de vida por pocoes */
+} EstatisticasCaminho;
+
+int caminho_calcular_estatisticas(const Mapa *mapa, const Coordenada *caminho,
+                                 int quantidade, EstatisticasCaminho *estat);
+void caminho_imprimir_relatorio(FILE *saida, const Mapa *mapa,
+                               const Coordenada *caminho, int quantidade);
+void caminho_desenhar_ascii(FILE *saida, const Mapa *mapa,
+                            const Coordenada *caminho, int quantidade);
+\end{lstlisting}
+
+\begin{itemize}
+    \item \textbf{Cálculo de Métricas (`caminho\_calcular\_estatisticas'):} Analisa o trajeto simulando o saldo de HP e extrai indicadores globais de desempenho da rota: dano absorvido, vida regenerada e picos de vulnerabilidade ($\text{HP}_{\min}$);
+    \item \textbf{Relatório Detalhado de Passos (`caminho\_imprimir\_relatorio'):} Gera uma tabela tabular cronológica indicando o índice do passo, a coordenada $(x,y)$, o vetor de movimento executado (\texttt{INICIO}, \texttt{CIMA} ou \texttt{ESQUERDA}), o efeito pontual da sala e o estado vital do estudante (\texttt{[VIVO]});
+    \item \textbf{Renderizador Gráfico em ASCII (`caminho\_desenhar\_ascii'):} Reconstrói a caverna em grade bidimensional, marcando a entrada com \texttt{[I]}, a saída com \texttt{[F]}, o trajeto percorrido com setas direcionais (\texttt{\textasciicircum} para passo ascendente e \texttt{<} para passo à esquerda) e as células inexploradas com pontos (\texttt{.}).
+\end{itemize}
+
+O módulo aceita qualquer descritor de fluxo (\texttt{FILE *saida}), permitindo direcionar as visualizações para o console padrão (\texttt{stdout}) ou para arquivos de auditoria, preservando total independência em relação ao modo de execução obrigatório do programa.
 
 \section{Resultados}
  
@@ -530,5 +712,120 @@ Foram testadas também entradas inválidas, verificando se o módulo devolve o c
 \end{table}
  
 Os arquivos de entrada utilizados estão na pasta \texttt{tp2/testes} do repositório: \texttt{Caverna1.txt} e \texttt{sem\_I.txt}.
- 
+
+\subsection{Testes do módulo de reconstrução, validação e Extra 3}
+
+Para verificar isoladamente o módulo \texttt{caminho} e as rotinas do Extra~3, foi desenvolvido o programa de testes integrados \texttt{teste\_caminho.c}, localizado em \texttt{tp2/testes/teste\_caminho.c}. Ele é compilado com o comando \texttt{make teste\_caminho} a partir da pasta raiz do projeto, que invoca:
+\begin{center}
+\texttt{gcc -Wall -Wextra -std=c99 -Iinclude -o teste\_caminho testes/teste\_caminho.c src/caminho.c src/dp.c src/mapa.c}
+\end{center}
+sem nenhuma emissão de advertência (\textit{warnings}). O programa executa uma bateria de testes cobrindo o caso clássico do enunciado, escolhas de rotas ótimas concorrentes, rejeição por inviabilidade matemática e testes de estresse defensivo da função \texttt{caminho\_validar}.
+
+A execução do teste sobre o mapa \texttt{Caverna1.txt} do enunciado é apresentada na Figura~\ref{fig:teste_caminho_ok}:
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.85\textwidth}
+        \ttfamily\small
+        \begin{tabular}{|l|}
+        \hline
+        \$ ./teste\_caminho \\
+        {[testes/Caverna1.txt]} Caminho reconstruido: 7 passos (HP final = 50) \\
+        \ \ 3 4 \\
+        \ \ 2 4 \\
+        \ \ 2 3 \\
+        \ \ 2 2 \\
+        \ \ 2 1 \\
+        \ \ 1 1 \\
+        \ \ 1 0 \\[0.15cm]
+        === Relatorio Detalhado do Percurso (Extra 3) === \\
+        Passo | Coordenada | Movimento | Efeito  | HP Resultante \\
+        ------+------------+-----------+---------+-------------- \\
+        \ \ \ \ 0 | \ \ ( 3, \ 4) | \ INICIO \ \ | \ \ \ -- \ \ | \ \ \ 40 [VIVO] \\
+        \ \ \ \ 1 | \ \ ( 2, \ 4) | \ CIMA \ \ \ \ | \ \ \ +20 | \ \ \ 60 [VIVO] \\
+        \ \ \ \ 2 | \ \ ( 2, \ 3) | ESQUERDA \ | \ \ \ \ \ 0 | \ \ \ 60 [VIVO] \\
+        \ \ \ \ 3 | \ \ ( 2, \ 2) | ESQUERDA \ | \ \ \ \ \ 0 | \ \ \ 60 [VIVO] \\
+        \ \ \ \ 4 | \ \ ( 2, \ 1) | ESQUERDA \ | \ \ \ \ \ 0 | \ \ \ 60 [VIVO] \\
+        \ \ \ \ 5 | \ \ ( 1, \ 1) | \ CIMA \ \ \ \ | \ \ \ -10 | \ \ \ 50 [VIVO] \\
+        \ \ \ \ 6 | \ \ ( 1, \ 0) | ESQUERDA \ | \ \ F (0) | \ \ \ 50 [VIVO] \\
+        ------+------------+-----------+---------+-------------- \\
+        Passos: 7 | HP: 40 -> 50 (Min: 40, Max: 60) | Dano: 10 | Cura: 20 \\[0.15cm]
+        === Visualizacao ASCII da Rota (Extra 3) === \\
+        \ \ \ \ \ \ 0 \ \ 1 \ \ 2 \ \ 3 \ \ 4 \\
+        \ \ \ \ -------------------- \\
+        \ 0 | \ . \ \ . \ \ . \ \ . \ \ . \ | \\
+        \ 1 | [F] \ < \ \ . \ \ . \ \ . \ | \\
+        \ 2 | \ . \ \ \textasciicircum \ \ < \ \ < \ \ < \ | \\
+        \ 3 | \ . \ \ . \ \ . \ \ . \ [I] | \\
+        \ \ \ \ -------------------- \\
+        Legenda: [I] Inicio | [F] Destino | \textasciicircum\ Cima | < Esquerda | . Nao visitado \\
+        \hline
+        \end{tabular}
+    \end{minipage}
+    \vspace{0.2cm}
+    \caption{Reconstrução do caminho ótimo, relatório e visualização ASCII para \texttt{Caverna1.txt}}
+    \label{fig:teste_caminho_ok}
+\end{figure}
+
+A rota obtida inicia pontualmente em $(3,4)$, atinge a sala $(2,4)$ coletando a poção de $+20$ HP, desloca-se pela linha 2 até a coluna 1 e sobe para $(1,1)$, finalizando na saída $(1,0)$ com saldo de $50$ HP. A validação via \texttt{caminho\_validar} confirmou conformidade absoluta com as regras.
+
+A Figura~\ref{fig:teste_caminho_extras} demonstra os testes nos cenários de desempate por otimização, ausência de solução e auditoria de erros:
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.85\textwidth}
+        \ttfamily\small
+        \begin{tabular}{|l|}
+        \hline
+        {[testes/caminho\_escolha.txt]} Caminho reconstruido: 5 passos (HP final = 70) \\
+        \ \ 2 2 \\
+        \ \ 1 2 \\
+        \ \ 0 2 \\
+        \ \ 0 1 \\
+        \ \ 0 0 \\
+        Passos: 5 | HP: 20 -> 70 (Min: 20, Max: 70) | Dano: 0 | Cura: 50 \\[0.15cm]
+        {[testes/sem\_solucao\_morte.txt]} Sem solucao confirmado com sucesso \\[0.15cm]
+        {[Validacoes negativas]} Todos os casos de rejeicao funcionaram \\
+        Todos os testes de caminho passaram com sucesso! \\
+        \hline
+        \end{tabular}
+    \end{minipage}
+    \vspace{0.2cm}
+    \caption{Testes de escolha de rota ótima, morte inevitável e validações defensivas}
+    \label{fig:teste_caminho_extras}
+\end{figure}
+
+A Tabela~\ref{tab:casos_caminho} sumariza todos os cenários avaliados no módulo:
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Casos de teste do módulo de reconstrução, validação e Extra 3.}
+\label{tab:casos_caminho}
+\vspace{0.2cm}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.4cm}|>{\raggedright\arraybackslash}X|>{\centering\arraybackslash}p{2.3cm}|>{\centering\arraybackslash}p{2.0cm}|}
+\hline
+\textbf{Caso / Teste} & \textbf{Descrição} & \textbf{Esperado} & \textbf{Obtido} \\
+\hline
+\texttt{Caverna1.txt} & Mapa padrão $4 \times 5$, rota de 7 passos com HP final 50 & Código 0, caminho exato $I \to F$ & Conforme \\
+\hline
+\texttt{caminho\_escolha.txt} & Mapa $3 \times 3$ com duas rotas viáveis (uma neutra e uma com poção de $+50$) & Escolha da rota com HP final 70 & Conforme \\
+\hline
+\texttt{sem\_solucao\_morte.txt} & Mapa $3 \times 3$ onde qualquer passo causa $\text{HP} \le 0$ & Retorno $-3$ (\texttt{SEM\_SOLUCAO}) & Conforme \\
+\hline
+Início incorreto & Validação com ponto inicial diferente de \texttt{I} & Retorno $-4$ (\texttt{INVALIDO\_INICIO}) & Conforme \\
+\hline
+Fim incorreto & Validação com ponto final diferente de \texttt{F} & Retorno $-5$ (\texttt{INVALIDO\_FIM}) & Conforme \\
+\hline
+Movimento ilegal & Validação com passo em diagonal $(\Delta l = -1, \Delta c = -1)$ & Retorno $-6$ (\texttt{INVALIDO\_MOV}) & Conforme \\
+\hline
+Fora dos limites & Validação com coordenada negativa $(-1, c)$ & Retorno $-8$ (\texttt{INVALIDO\_LIM}) & Conforme \\
+\hline
+Auditoria Extra 3 & Geração de métricas estatísticas e desenho ASCII no console & Relatório completo e mapa renderizado & Conforme \\
+\hline
+\end{tabularx}
+\end{table}
+
+Os arquivos de entrada utilizados encontram-se disponíveis na pasta \texttt{tp2/testes} do repositório: \texttt{Caverna1.txt}, \texttt{caminho\_escolha.txt} e \texttt{sem\_solucao\_morte.txt}.
+
 \end{document}
