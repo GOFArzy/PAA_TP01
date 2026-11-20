@@ -115,6 +115,11 @@ int main(int argc, char *argv[])
 
         // Exibicao detalhada e visualizacao ASCII caso requisitado
         if (verbose) {
+            printf("\n");
+            mapa_resumo(&mapa);
+            printf("\n");
+            dp_imprimir_tabela(&mapa, &solucao);
+            printf("\n");
             caminho_imprimir_relatorio(stdout, &mapa, caminho, quantidade_passos);
             caminho_desenhar_ascii(stdout, &mapa, caminho, quantidade_passos);
         }
@@ -125,6 +130,13 @@ int main(int argc, char *argv[])
         } else {
             printf("[SEM SOLUCAO] Nao ha rota viavel ate a saida F. Gravado \"%s\" em '%s'.\n",
                    SAIDA_TEXTO_SEM_SOLUCAO, arquivo_saida);
+        }
+
+        if (verbose) {
+            printf("\n");
+            mapa_resumo(&mapa);
+            printf("\n");
+            dp_imprimir_tabela(&mapa, &solucao);
         }
     }
 

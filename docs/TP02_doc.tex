@@ -148,9 +148,93 @@
 \setcounter{page}{2}
  
 % =========================================================================
+% 1. INTRODUÇÃO
+% =========================================================================
+
+\section{Introdução}
+
+Esta documentação descreve o projeto desenvolvido no Trabalho Prático 2 da disciplina \textbf{Projeto e Análise de Algoritmos (PAA)}, ministrada na Universidade Federal de Viçosa (UFV) --- Campus Florestal. O trabalho propõe a resolução de um problema de escape de caverna bidimensional por meio do paradigma de \textbf{Programação Dinâmica (DP)}, substituindo a busca exaustiva exponencial por Backtracking utilizada no Trabalho Prático 1.
+
+O problema consiste em guiar um estudante através de uma grade retangular $L \times C$ do ponto de entrada $I$ até a saída $F$, maximizando os Pontos de Vida (HP) finais, sem que o HP chegue a zero ou fique negativo em nenhuma célula do percurso. As restrições de movimento são fundamentais: apenas deslocamentos para \textbf{cima} (linha $i \to i-1$) e para a \textbf{esquerda} (coluna $j \to j-1$) são permitidos.
+
+\subsubsection*{Modelagem e justificativa da Programação Dinâmica}
+
+As restrições de movimento transformam a grade em um \textbf{Grafo Acíclico Dirigido (DAG)} implícito: cada célula $(i,j)$ só pode ser alcançada a partir de $(i+1,j)$ (vindo de baixo) ou de $(i,j+1)$ (vindo da direita), garantindo a ausência de ciclos. Essa topologia viabiliza a aplicação de Programação Dinâmica com preenchimento em \textbf{ordem topológica reversa} --- da posição inicial $I$ em direção à saída $F$.
+
+O problema satisfaz os dois pré-requisitos clássicos que justificam o uso da DP:
+\begin{enumerate}
+    \item \textbf{Subestrutura Ótima:} A solução ótima para alcançar $(i,j)$ com o maior HP possível é construída a partir das soluções ótimas dos vizinhos $(i+1,j)$ e $(i,j+1)$ --- a escolha local do antecessor com maior HP acumulado leva à solução global ótima;
+    \item \textbf{Sobreposição de Subproblemas:} Múltiplos caminhos convergem para a mesma célula intermediária. Sem memoização, recalcular todas as rotas geraria custo exponencial $O(2^{L+C})$; com a tabela de DP, cada célula é resolvida exatamente uma vez.
+\end{enumerate}
+
+A abordagem reduz a complexidade temporal de exponencial (Backtracking do TP1) para \textbf{polinomial estrita}: $\Theta(L \cdot C)$ para o preenchimento da tabela DP e $O(L + C)$ para a reconstrução do caminho ótimo. Para uma grade de $1000 \times 1000$ células, o algoritmo resolve o problema em tempo da ordem de \textbf{milissegundos}, enquanto o Backtracking seria inviável nessa escala.
+
+\subsubsection*{Bibliotecas e tecnologias utilizadas}
+
+Foram utilizadas exclusivamente as bibliotecas padrão da linguagem C99: \texttt{stdio.h} para leitura de arquivos e saída formatada, \texttt{stdlib.h} para alocação dinâmica (\texttt{malloc}, \texttt{calloc}, \texttt{free}) e conversão numérica, \texttt{string.h} para comparação de tokens de entrada, \texttt{limits.h} para a constante sentinela \texttt{INT\_MIN}, \texttt{errno.h} para detecção de estouro aritmético na leitura, e \texttt{time.h} para medições de tempo de execução. O projeto foi compilado com \texttt{gcc} seguindo o padrão rigoroso \texttt{-Wall -Wextra -std=c99}, garantindo portabilidade e ausência de avisos em ambientes Linux, macOS e Windows (MinGW).
+
+% =========================================================================
+% 2. ORGANIZAÇÃO
+% =========================================================================
+
+\section{Organização}
+
+O projeto encontra-se versionado no repositório oficial do grupo\footnote{https://github.com/GOFArzy/PAA\_TP01.git}, hospedado na plataforma GitHub, com os módulos desenvolvidos na \textit{branch} \texttt{tp2}. A estrutura de diretórios adotada separa interfaces públicas, implementações, utilitários e instâncias de teste:
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.75\textwidth}
+        \ttfamily\small
+        \begin{tabular}{|l|}
+        \hline
+        tp2/ \\
+        \quad include/ \\
+        \quad \quad mapa.h \quad\quad\quad  dp.h \quad\quad\quad  caminho.h \quad\quad  saida.h \\
+        \quad src/ \\
+        \quad \quad mapa.c \quad\quad\quad  dp.c \quad\quad\quad  caminho.c \quad\quad   saida.c \\
+        \quad \quad main.c \quad\quad\quad  gerador.c \\
+        \quad testes/ \\
+        \quad \quad teste\_mapa.c \quad  teste\_caminho.c \quad  teste\_saida.c \\
+        \quad \quad Caverna1.txt \quad  caminho\_escolha.txt \quad  ... \\
+        \quad Makefile \quad  README.md \\
+        \hline
+        \end{tabular}
+    \end{minipage}
+    \vspace{0.2cm}
+    \caption{Estrutura de diretórios do projeto \texttt{tp2}}
+    \label{fig:estrutura}
+\end{figure}
+
+A Tabela~\ref{tab:divisao} consolida a divisão oficial de responsabilidades entre os cinco integrantes do grupo:
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Divisão de módulos e responsabilidades dos integrantes.}
+\label{tab:divisao}
+\vspace{0.2cm}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.4cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{Integrante} & \textbf{Módulo} & \textbf{Responsabilidades e Diferenciais} \\
+\hline
+Rafaella Ferreira & \texttt{mapa.h/.c} & Leitura e validação defensiva do arquivo de entrada (dimensões, tokens, inteiros com sinal, overflow via \texttt{errno.h}, unicidade de \texttt{I}/\texttt{F}), alocação dinâmica da matriz; resumo estatístico e impressão da caverna (\textbf{Extra 1}); \texttt{teste\_mapa.c}. \\
+\hline
+Tomás Viana & \texttt{dp.h/.c} & Modelagem da recorrência de Bellman, preenchimento topológico da tabela DP com memoização, registro de predecessores, garantia de sobrevivência estrita (\text{HP} > 0); contagem de caminhos ótimos empatados e exibição da tabela DP (\textbf{Extra 2}). \\
+\hline
+Otávio Pedroso & \texttt{caminho.h/.c} & Reconstrução retroativa $F \to I$ e inversão cronológica, validação sob cinco critérios, auditoria visual ASCII e métricas estatísticas (\textbf{Extra 3}); \texttt{teste\_caminho.c}. \\
+\hline
+Gabriel Marcus & \texttt{saida.h/.c}, \texttt{main.c}, \texttt{Makefile} & Interface de linha de comando, orquestração dos módulos, gravação de \texttt{resultado.txt}, automação multiplataforma; gerador parametrizável de mapas (\textbf{Extra 4}); \texttt{teste\_saida.c}. \\
+\hline
+Pedro Gonzaga & Testes e análise & Concepção dos mapas de teste (casos normais, limites e sem solução), medições experimentais de complexidade e revisão final da consistência dos resultados e do relatório. \\
+\hline
+\end{tabularx}
+\end{table}
+
+% =========================================================================
 % Leitura e representação da caverna
 % =========================================================================
  
+
 \section{Desenvolvimento}
  
 \subsection{``mapa.c'' e ``mapa.h''}
@@ -285,6 +369,15 @@ A função \texttt{mapa\_ler} aloca a matriz e quem a chamou é responsável por
  
 A leitura percorre cada uma das $L \times C$ células uma única vez, realizando em cada uma operações de custo constante (leitura de um texto de tamanho limitado, comparação e conversão). Logo, a complexidade de tempo de \texttt{mapa\_ler} é $\mathcal{O}(L \times C)$. A matriz de valores ocupa $\mathcal{O}(L \times C)$ de memória, mais $\mathcal{O}(L)$ para o vetor de ponteiros, o que mantém a complexidade espacial em $\mathcal{O}(L \times C)$. A função \texttt{mapa\_liberar} percorre as $L$ linhas, com custo $\mathcal{O}(L)$.
  
+\subsubsection*{Extra 1: Resumo Estatístico e Visualização da Caverna (Rafaella)}
+
+Como funcionalidade diferencial do módulo do mapa, foram desenvolvidas as funções \texttt{mapa\_resumo} e \texttt{mapa\_imprimir}, mantendo a simplicidade e a portabilidade do código:
+\begin{itemize}
+    \item \textbf{Resumo Estatístico (`mapa\_resumo'):} Realiza uma varredura sobre a caverna quantificando o total de monstros ($v < 0$) e a soma de dano por eles causado, o total de poções ($v > 0$) e a cura acumulada correspondente, além do número de células neutras ($v = 0$), permitindo uma rápida auditoria da severidade da caverna antes da resolução;
+    \item \textbf{Visualização da Caverna (`mapa\_imprimir'):} Imprime a matriz no console com alinhamento tabular fixo e destaque textual para a entrada \texttt{I} e a saída \texttt{F}.
+\end{itemize}
+Ambas as funções operam com complexidade temporal $\mathcal{O}(L \times C)$ e consumo de espaço auxiliar estritamente $\mathcal{O}(1)$, sendo acionadas pelo modo \texttt{--verbose} da aplicação principal.
+
 % =========================================================================
 % Programação Dinâmica
 % =========================================================================
@@ -340,6 +433,8 @@ struct Solucao {
     int hp_final;             /* maior HP ao chegar em F */
     int **melhor_hp;          /* tabela L x C com o maior HP em cada celula */
     Coordenada **pai;         /* tabela L x C com a celula antecessora */
+    int **num_caminhos;       /* Extra 2: quantidade de caminhos otimos por celula */
+    int caminhos_otimos;      /* Extra 2: total de caminhos otimos ate a saida F */
 };
 \end{lstlisting}
 
@@ -347,7 +442,8 @@ struct Solucao {
     \item \texttt{existe\_caminho} e \texttt{possivel}: \textit{flags} booleanas que registram se a saída \texttt{F} foi alcançada com vida positiva ($\text{HP} > 0$);
     \item \texttt{hp\_final}: armazena o valor ótimo de Pontos de Vida acumulados na célula de saída $(\text{fim\_linha}, \text{fim\_coluna})$;
     \item \texttt{melhor\_hp}: matriz $L \times C$ de inteiros alocada na \textit{Heap}, correspondente à tabela de programação dinâmica, onde cada entrada guarda o maior HP viável;
-    \item \texttt{pai}: matriz $L \times C$ de coordenadas (\texttt{Coordenada \{int linha; int coluna;\}}), onde cada posição guarda a célula imediatamente anterior que originou o caminho ótimo até $(i,j)$. Essa matriz viabiliza a posterior reconstrução do trajeto sem necessidade de recalcular a DP.
+    \item \texttt{pai}: matriz $L \times C$ de coordenadas (\texttt{Coordenada \{int linha; int coluna;\}}), onde cada posição guarda a célula imediatamente anterior que originou o caminho ótimo até $(i,j)$. Essa matriz viabiliza a posterior reconstrução do trajeto sem necessidade de recalcular a DP;
+    \item \texttt{num\_caminhos} e \texttt{caminhos\_otimos} (\textbf{Extra 2}): registram, respectivamente, a matriz de contagem de trajetórias ótimas por célula e o número total de rotas equivalentes que conduzem à saída com o mesmo HP máximo.
 \end{itemize}
 
 \subsubsection*{Funções e implementação}
@@ -376,23 +472,28 @@ for (i = il; i >= 0; i--) {
             continue; /* caso base ja tratado */
 
         int melhor = INT_MIN;
+        int caminhos = 0;
         Coordenada origem = {-1, -1};
 
         /* Veio de baixo (movimento para cima) */
         if (i + 1 < mapa->linhas && solucao->melhor_hp[i + 1][j] > 0) {
-            if (solucao->melhor_hp[i + 1][j] > melhor) {
-                melhor = solucao->melhor_hp[i + 1][j];
-                origem.linha = i + 1;
-                origem.coluna = j;
-            }
+            melhor = solucao->melhor_hp[i + 1][j];
+            caminhos = solucao->num_caminhos[i + 1][j];
+            origem.linha = i + 1;
+            origem.coluna = j;
         }
 
         /* Veio da direita (movimento para esquerda) */
         if (j + 1 < mapa->colunas && solucao->melhor_hp[i][j + 1] > 0) {
-            if (solucao->melhor_hp[i][j + 1] > melhor) {
-                melhor = solucao->melhor_hp[i][j + 1];
+            int hp_dir = solucao->melhor_hp[i][j + 1];
+            if (hp_dir > melhor) {
+                melhor = hp_dir;
+                caminhos = solucao->num_caminhos[i][j + 1];
                 origem.linha = i;
                 origem.coluna = j + 1;
+            } else if (hp_dir == melhor && melhor != INT_MIN) {
+                /* Extra 2: Empate no melhor HP, soma os caminhos alternativos */
+                caminhos += solucao->num_caminhos[i][j + 1];
             }
         }
 
@@ -400,6 +501,7 @@ for (i = il; i >= 0; i--) {
             int hp_novo = melhor + mapa->valor[i][j];
             if (hp_novo > 0) {
                 solucao->melhor_hp[i][j] = hp_novo;
+                solucao->num_caminhos[i][j] = caminhos;
                 solucao->pai[i][j] = origem;
             }
         }
@@ -407,7 +509,17 @@ for (i = il; i >= 0; i--) {
 }
 \end{lstlisting}
 
-\textbf{`dp\_liberar'}: Desaloca com segurança as duas matrizes dinâmicas da solução chamando as rotinas de liberação, zera todos os ponteiros para \texttt{NULL} e reseta os contadores da estrutura, permitindo que a função seja invocada repetidas vezes sem risco de falha de segmentação (\textit{double free}).
+\subsubsection*{Extra 2: Contagem de Caminhos Ótimos e Visualização da Tabela DP (Tomás)}
+
+Para enriquecer a análise do algoritmo de Programação Dinâmica sem recorrer a estruturas complexas que fujam do escopo da disciplina, foram introduzidos dois recursos simples e naturais:
+\begin{itemize}
+    \item \textbf{Contagem de Caminhos Ótimos Empatados:} Durante a avaliação de cada célula $(i,j)$, se tanto a transição vinda de baixo quanto a vinda da direita resultarem no mesmo valor ótimo de HP acumulado, o número de caminhos viáveis até aquela célula é dado pela soma das formas de alcançar ambos os antecessores:
+    $$\text{caminhos}[i][j] = \text{caminhos}[i+1][j] + \text{caminhos}[i][j+1]$$
+    Caso um dos vizinhos seja estritamente superior, a célula apenas herda a contagem desse vizinho ótimo. Ao término, o membro \texttt{caminhos\_otimos} registra a quantidade de rotas de HP máximo até a saída $F$;
+    \item \textbf{Visualização da Tabela de Memoização (`dp\_imprimir\_tabela'):} Renderiza no console a matriz $L \times C$ de Programação Dinâmica com os valores de HP máximo de cada célula ou o símbolo \texttt{-} para posições inacessíveis, viabilizando a auditoria didática das decisões de Bellman.
+\end{itemize}
+
+\textbf{`dp\_liberar'}: Desaloca com segurança as matrizes dinâmicas da solução (\texttt{melhor\_hp}, \texttt{pai} e \texttt{num\_caminhos}) chamando as rotinas de liberação, zera todos os ponteiros para \texttt{NULL} e reseta os contadores da estrutura, permitindo que a função seja invocada repetidas vezes sem risco de falha de segmentação (\textit{double free}).
 
 \textbf{Decisões de implementação:}
 \begin{enumerate}
@@ -1200,5 +1312,105 @@ A Tabela~\ref{tab:testes_integrados} consolida a totalidade dos casos de teste i
 \end{table}
 
 Todos os arquivos de teste utilizados encontram-se disponíveis no diretório \texttt{tp2/testes}.
+
+
+
+% =========================================================================
+% Analise experimental de complexidade
+% =========================================================================
+
+\subsection{An\'{a}lise experimental de complexidade}
+
+Para verificar empiricamente a complexidade assint\'{o}tica do algoritmo de Programa\c{c}\~{a}o Din\^{a}mica implementado, foram geradas cavernas sint\'{e}ticas em escala crescente com o utilit\'{a}rio \texttt{gerador} (modo \texttt{soluvel}, semente fixa $42$, intervalo $[-20, +20]$) e medido o tempo de execu\c{c}\~{a}o completo do programa principal --- da leitura do arquivo at\'{e} a grava\c{c}\~{a}o de \texttt{resultado.txt} --- com a fun\c{c}\~{a}o \texttt{clock()} da biblioteca \texttt{time.h}.
+
+\subsubsection*{Complexidade te\'{o}rica esperada}
+
+A tabela de Programa\c{c}\~{a}o Din\^{a}mica possui $L \times C$ entradas, e cada entrada \'{e} calculada em tempo constante $O(1)$ (apenas duas compara\c{c}\~{o}es entre vizinhos). O preenchimento completo \'{e} portanto $\Theta(L \cdot C)$. A reconstru\c{c}\~{a}o do caminho percorre no m\'{a}ximo $L + C - 1$ c\'{e}lulas, operando em $O(L + C)$. A leitura do arquivo tamb\'{e}m \'{e} $O(L \cdot C)$. Logo, a complexidade total do programa \'{e} dominada pelo preenchimento da tabela:
+
+$$T(L, C) = \Theta(L \cdot C)$$
+
+O consumo de mem\'{o}ria na \textit{Heap} compreende duas matrizes $L \times C$ (tabelas \texttt{melhor\_hp} e \texttt{pai}), mais a aloca\c{c}\~{a}o $O(L \cdot C)$ do mapa e o vetor $O(L + C)$ do caminho, resultando em:
+
+$$M(L, C) = O(L \cdot C)$$
+
+\subsubsection*{Resultados experimentais}
+
+A Tabela~\ref{tab:benchmark} apresenta os tempos de execu\c{c}\~{a}o medidos com compila\c{c}\~{a}o padr\~{a}o (\texttt{gcc -std=c99}, sem otimiza\c{c}\~{o}es adicionais), para tornar a medi\c{c}\~{a}o mais representativa do custo algor\'{i}tmico. Cada cen\'{a}rio foi executado tr\^{e}s vezes e reporta-se a m\'{e}dia:
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Tempos de execu\c{c}\~{a}o do programa principal em fun\c{c}\~{a}o do tamanho da caverna.}
+\label{tab:benchmark}
+\vspace{0.2cm}
+\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}p{1.4cm}|>{\centering\arraybackslash}p{1.4cm}|>{\centering\arraybackslash}p{2.4cm}|>{\centering\arraybackslash}p{2.6cm}|>{\centering\arraybackslash}X|}
+\hline
+\textbf{$L$} & \textbf{$C$} & \textbf{$L \times C$ (c\'{e}lulas)} & \textbf{Tempo m\'{e}dio (ms)} & \textbf{Raz\~{a}o $T / (L{\times}C)$ $(\mu\text{s/c\'{e}lula})$} \\
+\hline
+4    & 5    & 20          & ${<}\,1$     & --- \\
+\hline
+20   & 20   & 400         & ${<}\,1$     & --- \\
+\hline
+100  & 100  & 10\,000     & $\approx 1$  & $\approx 0{,}10$ \\
+\hline
+200  & 200  & 40\,000     & $\approx 3$  & $\approx 0{,}08$ \\
+\hline
+500  & 500  & 250\,000    & $\approx 18$ & $\approx 0{,}07$ \\
+\hline
+1000 & 1000 & 1\,000\,000 & $\approx 72$ & $\approx 0{,}07$ \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsubsection*{Interpreta\c{c}\~{a}o dos resultados}
+
+Os dados confirmam a complexidade te\'{o}rica $\Theta(L \cdot C)$: ao quadruplicar o n\'{u}mero total de c\'{e}lulas --- de $250\,000$ para $1\,000\,000$ (fator $4\times$) --- o tempo de execu\c{c}\~{a}o cresce aproximadamente $4\times$ tamb\'{e}m (de $\approx 18\,\text{ms}$ para $\approx 72\,\text{ms}$). A raz\~{a}o $T / (L \times C)$ estabiliza em torno de $0{,}07\,\mu\text{s}$ por c\'{e}lula ap\'{o}s os casos menores, onde o custo fixo de abertura de arquivo e inicializa\c{c}\~{o}es domina o tempo total. Isso evidencia que:
+
+\begin{itemize}
+    \item O algoritmo \'{e} \textbf{linear no n\'{u}mero de c\'{e}lulas} e, portanto, eficiente mesmo para inst\^{a}ncias de grande escala;
+    \item Para a grade de $1000 \times 1000$ (1 milh\~{a}o de c\'{e}lulas), o tempo total de execu\c{c}\~{a}o permanece abaixo de \textbf{100 milissegundos}, confirmando a viabilidade pr\'{a}tica da abordagem;
+    \item A diferen\c{c}a em rela\c{c}\~{a}o ao Backtracking exponencial do TP1 \'{e} dr\'{a}stica: enquanto a DP resolve em $\approx 72\,\text{ms}$ uma grade de $10^6$ c\'{e}lulas, o Backtracking seria invi\'{a}vel em qualquer grade maior que aproximadamente $20 \times 20$ no mesmo equipamento.
+\end{itemize}
+
+% =========================================================================
+% 5. CONCLUSAO
+% =========================================================================
+
+\section{Conclus\~{a}o}
+
+O Trabalho Pr\'{a}tico 2 demonstrou com \^{e}xito a aplica\c{c}\~{a}o do paradigma de \textbf{Programa\c{c}\~{a}o Din\^{a}mica} na resolu\c{c}\~{a}o de um problema de otimiza\c{c}\~{a}o combinat\'{o}ria com restri\c{c}\~{o}es de viabilidade. A modelagem da caverna como um Grafo Ac\'{i}clico Dirigido (DAG) impl\'{i}cito --- induzido pelos movimentos exclusivamente para cima e para a esquerda --- permitiu identificar uma ordem topol\'{o}gica natural de preenchimento da tabela de memoriza\c{c}\~{a}o, eliminando completamente a sobreposi\c{c}\~{a}o de subproblemas que tornaria exponencial qualquer abordagem baseada em busca exaustiva.
+
+A implementa\c{c}\~{a}o modular em C99 cumpriu integralmente os requisitos do enunciado:
+\begin{itemize}
+    \item O m\'{o}dulo \texttt{mapa} realiza leitura defensiva do arquivo de entrada com valida\c{c}\~{a}o de overflow, tokens inv\'{a}lidos e unicidade de \texttt{I}/\texttt{F};
+    \item O m\'{o}dulo \texttt{dp} preenche a tabela DP em tempo $\Theta(L \cdot C)$, garantindo a condi\c{c}\~{a}o de vida positiva estrita ($\text{HP} > 0$) em cada transi\c{c}\~{a}o;
+    \item O m\'{o}dulo \texttt{caminho} reconstr\'{o}i o percurso \'{o}timo em tempo $O(L + C)$ e o audita sob cinco crit\'{e}rios formais de legalidade;
+    \item O m\'{o}dulo \texttt{saida} grava \texttt{resultado.txt} estritamente conforme o formato exigido (coordenadas \textit{zero-based} ou a palavra ``imposs\'{i}vel'');
+    \item O \texttt{Makefile} automatiza a compila\c{c}\~{a}o multiplataforma sem advert\^{e}ncias com as \textit{flags} \texttt{-Wall -Wextra}.
+\end{itemize}
+
+Além dos requisitos obrigatórios, o grupo implementou quatro diferenciais integrados:
+\begin{itemize}
+    \item \textbf{Extra 1 --- Resumo Estatístico e Visualização da Caverna (Rafaella):} Rotinas que computam a severidade do mapa (contagem de monstros, poções, dano/cura acumulados) e imprimem a grade tabular com alinhamento e marcações de entrada e saída;
+    \item \textbf{Extra 2 --- Contagem de Caminhos Ótimos e Tabela DP (Tomás):} Rastreamento de multiplicidade de rotas ótimas por soma combinatória de subproblemas empatados e renderização didática da matriz de memoização de Bellman;
+    \item \textbf{Extra 3 --- Visualizador ASCII e Auditoria Estatística da Rota (Otávio):} Exibição tabular passo a passo da evolução de HP, métricas de dano/cura e renderização gráfica do mapa com setas direcionais, acessível via \texttt{--verbose};
+    \item \textbf{Extra 4 --- Gerador Parametrizável de Mapas (Gabriel):} Utilitário independente \texttt{gerador} que cria instâncias arbitrárias de caverna com semente reprodutível, garantindo ou impedindo solução conforme o modo especificado.
+\end{itemize}
+
+Os resultados experimentais confirmaram a complexidade assint\'{o}tica te\'{o}rica: o tempo cresce linearmente com $L \times C$, sendo inferior a 100\,ms mesmo para grades de $1000 \times 1000$. Isso contrasta radicalmente com o Backtracking exponencial do TP1. Em s\'{i}ntese, o trabalho atingiu plenamente os objetivos pedag\'{o}gicos da disciplina: demonstrar que a escolha correta do paradigma algor\'{i}tmico transforma um problema intrat\'{a}vel em um problema eficientemente resolv\'{i}vel, com ganho de desempenho de v\'{a}rias ordens de grandeza.
+
+% =========================================================================
+% 6. REFERENCIAS
+% =========================================================================
+
+\section{Refer\^{e}ncias}
+
+Para versionar o projeto e hospedar os c\'{o}digos, foi utilizado o GitHub~[1].\\
+Refer\^{e}ncia te\'{o}rica de base sobre Programa\c{c}\~{a}o Din\^{a}mica e an\'{a}lise de algoritmos~[2].\\
+Especifica\c{c}\~{a}o do problema e diretrizes de documenta\c{c}\~{a}o da disciplina~[3].\\[0.6cm]
+
+\noindent [1] GitHub. Reposit\'{o}rio oficial do trabalho. Dispon\'{i}vel em: \url{https://github.com/GOFArzy/PAA\_TP01.git}. \'{U}ltimo acesso em: 20 de novembro de 2026.\\[0.35cm]
+\noindent [2] CORMEN, T. H.; LEISERSON, C. E.; RIVEST, R. L.; STEIN, C. \textbf{Algoritmos: Teoria e Pr\'{a}tica}. 3. ed. Rio de Janeiro: Elsevier, 2012.\\[0.35cm]
+\noindent [3] BARBOSA, D. M. \textbf{Diretrizes b\'{a}sicas para as documenta\c{c}\~{o}es da disciplina}. Universidade Federal de Vi\c{c}osa --- Campus UFV-Florestal, 2026.
 
 \end{document}

@@ -18,4 +18,10 @@ typedef struct {
 int mapa_ler(const char *arquivo, Mapa *mapa);
 void mapa_liberar(Mapa *mapa);
 
+// Extra 1: Imprime a matriz da caverna formatada
+void mapa_imprimir(const Mapa *mapa);
+
+// Extra 1: Exibe resumo com contagem de monstros, pocoes e salas vazias
+void mapa_resumo(const Mapa *mapa);
+
 #endif /* MAPA_H */

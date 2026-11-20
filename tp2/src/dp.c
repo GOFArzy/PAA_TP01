@@ -74,11 +74,14 @@ int dp_resolver(const Mapa *mapa, Solucao *solucao)
     solucao->hp_final = 0;
     solucao->melhor_hp = NULL;
     solucao->pai = NULL;
+    solucao->num_caminhos = NULL;
+    solucao->caminhos_otimos = 0;
 
-    // Aloca matrizes melhor_hp e pai
+    // Aloca matrizes melhor_hp, pai e num_caminhos (Extra 2)
     solucao->melhor_hp = alocar_matriz_int(mapa->linhas, mapa->colunas);
     solucao->pai = alocar_matriz_coord(mapa->linhas, mapa->colunas);
-    if (solucao->melhor_hp == NULL || solucao->pai == NULL) {
+    solucao->num_caminhos = alocar_matriz_int(mapa->linhas, mapa->colunas);
+    if (solucao->melhor_hp == NULL || solucao->pai == NULL || solucao->num_caminhos == NULL) {
         dp_liberar(mapa, solucao);
         return 0;
     }
@@ -89,6 +92,7 @@ int dp_resolver(const Mapa *mapa, Solucao *solucao)
             solucao->melhor_hp[i][j] = INT_MIN;
             solucao->pai[i][j].linha = -1;
             solucao->pai[i][j].coluna = -1;
+            solucao->num_caminhos[i][j] = 0;
         }
     }
 
@@ -100,6 +104,7 @@ int dp_resolver(const Mapa *mapa, Solucao *solucao)
         return 0;
     }
     solucao->melhor_hp[il][ic] = mapa->hp_inicial;
+    solucao->num_caminhos[il][ic] = 1; // Extra 2: exatamente 1 caminho no inicio
 
     // Preenche a tabela DP
     for (i = il; i >= 0; i--) {
@@ -108,23 +113,28 @@ int dp_resolver(const Mapa *mapa, Solucao *solucao)
                 continue; // caso base ja tratado
 
             int melhor = INT_MIN;
+            int caminhos = 0;
             Coordenada origem = {-1, -1};
 
-            // Veio de baixo
+            // Veio de baixo (movimento para cima)
             if (i + 1 < mapa->linhas && solucao->melhor_hp[i + 1][j] > 0) {
-                if (solucao->melhor_hp[i + 1][j] > melhor) {
-                    melhor = solucao->melhor_hp[i + 1][j];
-                    origem.linha = i + 1;
-                    origem.coluna = j;
-                }
+                melhor = solucao->melhor_hp[i + 1][j];
+                caminhos = solucao->num_caminhos[i + 1][j];
+                origem.linha = i + 1;
+                origem.coluna = j;
             }
 
-            // Veio da direita
+            // Veio da direita (movimento para esquerda)
             if (j + 1 < mapa->colunas && solucao->melhor_hp[i][j + 1] > 0) {
-                if (solucao->melhor_hp[i][j + 1] > melhor) {
-                    melhor = solucao->melhor_hp[i][j + 1];
+                int hp_dir = solucao->melhor_hp[i][j + 1];
+                if (hp_dir > melhor) {
+                    melhor = hp_dir;
+                    caminhos = solucao->num_caminhos[i][j + 1];
                     origem.linha = i;
                     origem.coluna = j + 1;
+                } else if (hp_dir == melhor && melhor != INT_MIN) {
+                    // Extra 2: Empate no melhor HP, soma os caminhos alternativos
+                    caminhos += solucao->num_caminhos[i][j + 1];
                 }
             }
 
@@ -132,6 +142,7 @@ int dp_resolver(const Mapa *mapa, Solucao *solucao)
                 int hp_novo = melhor + mapa->valor[i][j];
                 if (hp_novo > 0) {
                     solucao->melhor_hp[i][j] = hp_novo;
+                    solucao->num_caminhos[i][j] = caminhos;
                     solucao->pai[i][j] = origem;
                 }
             }
@@ -146,6 +157,7 @@ int dp_resolver(const Mapa *mapa, Solucao *solucao)
             solucao->existe_caminho = 1;
             solucao->possivel = 1;
             solucao->hp_final = solucao->melhor_hp[fl][fc];
+            solucao->caminhos_otimos = solucao->num_caminhos[fl][fc];
             return 1;
         }
     }
@@ -153,6 +165,7 @@ int dp_resolver(const Mapa *mapa, Solucao *solucao)
     solucao->existe_caminho = 0;
     solucao->possivel = 0;
     solucao->hp_final = 0;
+    solucao->caminhos_otimos = 0;
     return 0;
 }
 
@@ -170,8 +183,37 @@ void dp_liberar(const Mapa *mapa, Solucao *solucao)
         liberar_matriz_coord(solucao->pai, mapa->linhas);
         solucao->pai = NULL;
     }
+    if (solucao->num_caminhos != NULL) {
+        liberar_matriz_int(solucao->num_caminhos, mapa->linhas);
+        solucao->num_caminhos = NULL;
+    }
 
     solucao->existe_caminho = 0;
     solucao->possivel = 0;
     solucao->hp_final = 0;
+    solucao->caminhos_otimos = 0;
+}
+
+// Extra 2: Imprime a tabela da programacao dinamica no terminal
+void dp_imprimir_tabela(const Mapa *mapa, const Solucao *solucao)
+{
+    int i, j;
+
+    if (mapa == NULL || solucao == NULL || solucao->melhor_hp == NULL)
+        return;
+
+    printf("=== Tabela de Programacao Dinamica (Melhor HP) ===\n");
+    for (i = 0; i < mapa->linhas; i++) {
+        for (j = 0; j < mapa->colunas; j++) {
+            if (solucao->melhor_hp[i][j] == INT_MIN)
+                printf("   -");
+            else
+                printf("%4d", solucao->melhor_hp[i][j]);
+        }
+        printf("\n");
+    }
+    if (solucao->existe_caminho) {
+        printf("HP maximo ao chegar em F: %d | Caminhos otimos possiveis: %d\n",
+               solucao->hp_final, solucao->caminhos_otimos);
+    }
 }

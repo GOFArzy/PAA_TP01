@@ -112,3 +112,64 @@ int mapa_ler(const char *arquivo, Mapa *mapa)
     }
     return MAPA_OK;
 }
+
+// Extra 1: Imprime a caverna com destaque para as celulas I e F
+void mapa_imprimir(const Mapa *mapa)
+{
+    int i, j;
+
+    if (mapa == NULL || mapa->valor == NULL)
+        return;
+
+    printf("=== Mapa da Caverna (%d x %d) ===\n", mapa->linhas, mapa->colunas);
+    for (i = 0; i < mapa->linhas; i++) {
+        for (j = 0; j < mapa->colunas; j++) {
+            if (i == mapa->inicio_linha && j == mapa->inicio_coluna)
+                printf("   I");
+            else if (i == mapa->fim_linha && j == mapa->fim_coluna)
+                printf("   F");
+            else
+                printf("%4d", mapa->valor[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+// Extra 1: Conta monstros, pocoes e salas vazias do mapa
+void mapa_resumo(const Mapa *mapa)
+{
+    int i, j;
+    int monstros = 0, pocoes = 0, vazias = 0;
+    int dano_total = 0, cura_total = 0;
+
+    if (mapa == NULL || mapa->valor == NULL)
+        return;
+
+    for (i = 0; i < mapa->linhas; i++) {
+        for (j = 0; j < mapa->colunas; j++) {
+            // Ignora celulas especiais de inicio e saida
+            if ((i == mapa->inicio_linha && j == mapa->inicio_coluna) ||
+                (i == mapa->fim_linha && j == mapa->fim_coluna))
+                continue;
+
+            int v = mapa->valor[i][j];
+            if (v < 0) {
+                monstros++;
+                dano_total += (-v);
+            } else if (v > 0) {
+                pocoes++;
+                cura_total += v;
+            } else {
+                vazias++;
+            }
+        }
+    }
+
+    printf("=== Resumo da Caverna (Extra 1) ===\n");
+    printf("Dimensoes: %d x %d | HP inicial: %d\n", mapa->linhas, mapa->colunas, mapa->hp_inicial);
+    printf("Inicio I: (%d, %d) | Saida F: (%d, %d)\n",
+           mapa->inicio_linha, mapa->inicio_coluna, mapa->fim_linha, mapa->fim_coluna);
+    printf("Monstros: %d (dano total: %d)\n", monstros, dano_total);
+    printf("Pocoes: %d (cura total: %d)\n", pocoes, cura_total);
+    printf("Salas vazias: %d\n", vazias);
+}
