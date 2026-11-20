@@ -223,7 +223,7 @@ A Tabela~\ref{tab:divisao} consolida a divisão oficial de responsabilidades ent
 \hline
 Rafaella Ferreira & \texttt{mapa.h/.c} & Leitura e validação defensiva do arquivo de entrada (dimensões, tokens, inteiros com sinal, overflow via \texttt{errno.h}, unicidade de \texttt{I}/\texttt{F}), alocação e liberação da matriz; \texttt{teste\_mapa.c}. \\
 \hline
-Tomás Viana & \texttt{dp.h/.c} & Modelagem da recorrência de Bellman, preenchimento topológico da tabela DP com memoização, registro de predecessores, garantia de sobrevivência estrita (\text{HP} > 0); resumo estatístico e visualização do mapa (\textbf{Extra 1}); contagem de caminhos ótimos empatados e exibição da tabela DP (\textbf{Extra 2}). \\
+Tomás Viana & \texttt{dp.h/.c} & Modelagem da recorrência de Bellman, preenchimento topológico da tabela DP com memoização, registro de predecessores, garantia de sobrevivência estrita (\text{HP} > 0); versão da solução com paredes e obstáculos no espaço 2D (\textbf{Extra 1}); contagem de caminhos ótimos empatados e exibição da tabela DP (\textbf{Extra 2}). \\
 \hline
 Otávio Pedroso & \texttt{caminho.h/.c} & Reconstrução retroativa $F \to I$ e inversão cronológica, validação sob cinco critérios, auditoria visual ASCII e métricas estatísticas (\textbf{Extra 3}); \texttt{teste\_caminho.c}. \\
 \hline
@@ -373,14 +373,15 @@ A função \texttt{mapa\_ler} aloca a matriz e quem a chamou é responsável por
  
 A leitura percorre cada uma das $L \times C$ células uma única vez, realizando em cada uma operações de custo constante (leitura de um texto de tamanho limitado, comparação e conversão). Logo, a complexidade de tempo de \texttt{mapa\_ler} é $\mathcal{O}(L \times C)$. A matriz de valores ocupa $\mathcal{O}(L \times C)$ de memória, mais $\mathcal{O}(L)$ para o vetor de ponteiros, o que mantém a complexidade espacial em $\mathcal{O}(L \times C)$. A função \texttt{mapa\_liberar} percorre as $L$ linhas, com custo $\mathcal{O}(L)$.
  
-\subsubsection*{Extra 1: Resumo Estatístico e Visualização da Caverna (Tomás)}
+\subsubsection*{Extra 1: Versão da Solução com Paredes e Obstáculos (Tomás)}
 
-Como funcionalidade extra desenvolvida por Tomás para apoiar a leitura do mapa, foram implementadas as funções \texttt{mapa\_resumo} e \texttt{mapa\_imprimir}:
+Atendendo ao diferencial de modelar cavernas onde certas movimentações são impedidas por paredes ou obstáculos intransponíveis, foi desenvolvida por Tomás uma versão dedicada da solução:
 \begin{itemize}
-    \item \textbf{Resumo Estatístico (\texttt{mapa\_resumo}):} Percorre a caverna contabilizando a quantidade de monstros ($v < 0$) e o total de dano, o número de poções ($v > 0$) e a cura acumulada, além das células neutras ($v = 0$). Isso permite ter um panorama do mapa antes da execução;
-    \item \textbf{Visualização da Caverna (\texttt{mapa\_imprimir}):} Imprime a matriz no terminal de forma formatada e alinhada, com marcações visíveis para a entrada \texttt{I} e a saída \texttt{F}.
+    \item \textbf{Representação no Mapa:} No arquivo de entrada, células com paredes são denotadas pelo caractere \texttt{\#} (ou pela constante sentinela \texttt{MAPA\_PAREDE}). A leitura identifica esses obstáculos sem romper a estrutura da matriz;
+    \item \textbf{Resolução com Bloqueio de Movimento (\texttt{dp\_resolver\_com\_paredes}):} Durante o preenchimento da tabela de memoização, células com paredes são tratadas como intransponíveis, permanecendo com \texttt{INT\_MIN} e zero caminhos. As transições a partir de células vizinhas verificam explicitamente se o destino é uma parede, impedindo a passagem e forçando o estudante a contornar o obstáculo por trajetórias alternativas. Caso as paredes bloqueiem todos os caminhos possíveis até \texttt{F}, a função reporta ausência de rota viável;
+    \item \textbf{Complexidade Assintótica:} O tratamento de paredes preserva rigorosamente a complexidade original da DP: tempo $\Theta(L \cdot C)$ e espaço $\Theta(L \cdot C)$, já que a checagem é realizada em tempo elementar $\mathcal{O}(1)$ por célula;
+    \item \textbf{Auditoria e Visualização:} As funções \texttt{mapa\_resumo} e \texttt{mapa\_imprimir} quantificam os obstáculos presentes e exibem as paredes marcadas com \texttt{\#} no terminal.
 \end{itemize}
-Ambas as funções operam em tempo $\mathcal{O}(L \times C)$ e memória auxiliar $\mathcal{O}(1)$, sendo acionadas quando o programa é executado com a opção \texttt{--verbose}.
 
 % =========================================================================
 % Programação Dinâmica
@@ -1387,7 +1388,7 @@ A implementação modular em C99 atendeu a todos os requisitos do projeto:
 
 Além do escopo obrigatório, o grupo implementou quatro funcionalidades extras:
 \begin{itemize}
-    \item \textbf{Extra 1 (Tomás):} Resumo estatístico da caverna (contagem de monstros, poções, dano e cura) e visualização formatada do mapa;
+    \item \textbf{Extra 1 (Tomás):} Versão da solução considerando espaço 2D com paredes e obstáculos (\texttt{\#}), contornando bloqueios via \texttt{dp\_resolver\_com\_paredes} ou reportando impossibilidade sem perda de eficiência;
     \item \textbf{Extra 2 (Tomás):} Contagem de múltiplos caminhos ótimos empatados e exibição da tabela de DP;
     \item \textbf{Extra 3 (Otávio):} Visualizador em arte ASCII do caminho percorrido e métricas passo a passo no modo \texttt{--verbose};
     \item \textbf{Extra 4 (Gabriel):} Gerador configurável de mapas de caverna com semente reprodutível.

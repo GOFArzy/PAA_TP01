@@ -17,6 +17,8 @@ struct Solucao {
 };
 
 int dp_resolver(const Mapa *mapa, Solucao *solucao);
+// Extra 1: Versao da solucao considerando espaco com paredes/obstaculos
+int dp_resolver_com_paredes(const Mapa *mapa, Solucao *solucao);
 void dp_liberar(const Mapa *mapa, Solucao *solucao);
 
 // Extra 2: Imprime a tabela da DP com o melhor HP de cada celula

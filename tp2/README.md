@@ -21,7 +21,7 @@ O projeto resolve o problema de encontrar a rota que maximiza a quantidade final
 1. **Rafa (Leitura e Representação do Mapa):** `include/mapa.h`, `src/mapa.c`, `testes/teste_mapa.c`
    * Leitura do arquivo de entrada, validação de dimensões e tokens, alocação dinâmica da matriz da caverna, identificação das coordenadas de início `I` e saída `F`, e gerenciamento seguro de memória.
 2. **Tomás (Programação Dinâmica e Extras 1 e 2):** `include/dp.h`, `src/dp.c`
-   * Modelagem de subproblemas e recorrência, preenchimento em ordem topológica reversa da tabela de Programação Dinâmica com memoização, identificação de sobrevivência estrita ($\text{HP} > 0$), registro de predecessores, **Extra 1** (resumo estatístico da caverna com contagem de monstros/poções e visualização formatada do mapa) e **Extra 2** (contagem de caminhos ótimos que empatam no HP máximo e exibição didática da tabela DP no terminal).
+   * Modelagem de subproblemas e recorrência, preenchimento em ordem topológica reversa da tabela de Programação Dinâmica com memoização, identificação de sobrevivência estrita ($\text{HP} > 0$), registro de predecessores, **Extra 1** (versão da solução considerando espaço com paredes/obstáculos `#` impedindo movimentações, via `dp_resolver_com_paredes`) e **Extra 2** (contagem de caminhos ótimos que empatam no HP máximo e exibição didática da tabela DP no terminal).
 3. **Otávio (Reconstrução e Validação do Caminho):** `include/caminho.h`, `src/caminho.c`, `testes/teste_caminho.c`
    * Reconstrução da trajetória ótima $I \to F$ a partir dos predecessores calculados pela DP, validação rigorosa de movimentos, limites e sobrevivência, e geração de relatórios detalhados com mapa em arte ASCII (Extra 3).
 4. **Gabs (Execução, Saída, Build e Gerador):** `include/saida.h`, `src/saida.c`, `src/main.c`, `src/gerador.c`, `Makefile`, `testes/teste_saida.c`
@@ -154,11 +154,12 @@ impossível
 
 ## Funcionalidades Extras Desenvolvidas pelo Grupo
 
-### Extra 1: Resumo Estatístico e Visualização da Caverna (Tomás)
-Implementado em apoio à análise do mapa:
-* `mapa_resumo`: Percorre a matriz da caverna e quantifica as salas por categoria: total de monstros com dano acumulado, total de poções com cura acumulada, quantidade de salas neutras, e posições $I$ e $F$.
-* `mapa_imprimir`: Exibe a caverna com alinhamento fixo e marcação visual das células de entrada `I` e saída `F`.
-* Ativado automaticamente ao rodar o programa principal com a flag `-v` ou `--verbose`.
+### Extra 1: Solução para Cavernas com Paredes/Obstáculos (Tomás)
+Implementado no módulo `dp` e integrado à leitura do mapa:
+* **Espaço 2D com Paredes:** Permite representar obstáculos intransponíveis na caverna utilizando o caractere `#` (ou valor sentinela `MAPA_PAREDE`). Movimentações para dentro ou através de paredes são estritamente impedidas.
+* `dp_resolver_com_paredes`: Versão da solução que propaga o maior HP contornando as paredes existentes. Células com paredes permanecem com HP inalcançável (`INT_MIN`) e zero caminhos, forçando o trajeto a encontrar rotas alternativas viáveis ou reportar impossibilidade se o caminho estiver bloqueado.
+* **Ferramentas de Apoio:** Inclui `mapa_resumo` (estatísticas de monstros, poções e paredes) e `mapa_imprimir` (visualização formatada do mapa com `#` para paredes).
+* Testado com casos de contorno viável (`testes/caverna_paredes.txt`) e bloqueio total (`testes/caverna_paredes_bloqueado.txt`).
 
 ### Extra 2: Contagem de Caminhos Ótimos e Tabela de DP (Tomás)
 Implementado no módulo `dp`:
