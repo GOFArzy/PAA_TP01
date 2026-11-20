@@ -217,9 +217,9 @@ A Tabela~\ref{tab:divisao} consolida a divisão oficial de responsabilidades ent
 \hline
 \textbf{Integrante} & \textbf{Módulo} & \textbf{Responsabilidades e Diferenciais} \\
 \hline
-Rafaella Ferreira & \texttt{mapa.h/.c} & Leitura e validação defensiva do arquivo de entrada (dimensões, tokens, inteiros com sinal, overflow via \texttt{errno.h}, unicidade de \texttt{I}/\texttt{F}), alocação dinâmica da matriz; resumo estatístico e impressão da caverna (\textbf{Extra 1}); \texttt{teste\_mapa.c}. \\
+Rafaella Ferreira & \texttt{mapa.h/.c} & Leitura e validação defensiva do arquivo de entrada (dimensões, tokens, inteiros com sinal, overflow via \texttt{errno.h}, unicidade de \texttt{I}/\texttt{F}), alocação e liberação da matriz; \texttt{teste\_mapa.c}. \\
 \hline
-Tomás Viana & \texttt{dp.h/.c} & Modelagem da recorrência de Bellman, preenchimento topológico da tabela DP com memoização, registro de predecessores, garantia de sobrevivência estrita (\text{HP} > 0); contagem de caminhos ótimos empatados e exibição da tabela DP (\textbf{Extra 2}). \\
+Tomás Viana & \texttt{dp.h/.c} & Modelagem da recorrência de Bellman, preenchimento topológico da tabela DP com memoização, registro de predecessores, garantia de sobrevivência estrita (\text{HP} > 0); resumo estatístico e visualização do mapa (\textbf{Extra 1}); contagem de caminhos ótimos empatados e exibição da tabela DP (\textbf{Extra 2}). \\
 \hline
 Otávio Pedroso & \texttt{caminho.h/.c} & Reconstrução retroativa $F \to I$ e inversão cronológica, validação sob cinco critérios, auditoria visual ASCII e métricas estatísticas (\textbf{Extra 3}); \texttt{teste\_caminho.c}. \\
 \hline
@@ -369,9 +369,9 @@ A função \texttt{mapa\_ler} aloca a matriz e quem a chamou é responsável por
  
 A leitura percorre cada uma das $L \times C$ células uma única vez, realizando em cada uma operações de custo constante (leitura de um texto de tamanho limitado, comparação e conversão). Logo, a complexidade de tempo de \texttt{mapa\_ler} é $\mathcal{O}(L \times C)$. A matriz de valores ocupa $\mathcal{O}(L \times C)$ de memória, mais $\mathcal{O}(L)$ para o vetor de ponteiros, o que mantém a complexidade espacial em $\mathcal{O}(L \times C)$. A função \texttt{mapa\_liberar} percorre as $L$ linhas, com custo $\mathcal{O}(L)$.
  
-\subsubsection*{Extra 1: Resumo Estatístico e Visualização da Caverna (Rafaella)}
+\subsubsection*{Extra 1: Resumo Estatístico e Visualização da Caverna (Tomás)}
 
-Como funcionalidade diferencial do módulo do mapa, foram desenvolvidas as funções \texttt{mapa\_resumo} e \texttt{mapa\_imprimir}, mantendo a simplicidade e a portabilidade do código:
+Como primeira funcionalidade diferencial desenvolvida por Tomás para apoiar o módulo do mapa e a análise da entrada, foram implementadas as funções \texttt{mapa\_resumo} e \texttt{mapa\_imprimir}, mantendo a simplicidade e a portabilidade do código:
 \begin{itemize}
     \item \textbf{Resumo Estatístico (`mapa\_resumo'):} Realiza uma varredura sobre a caverna quantificando o total de monstros ($v < 0$) e a soma de dano por eles causado, o total de poções ($v > 0$) e a cura acumulada correspondente, além do número de células neutras ($v = 0$), permitindo uma rápida auditoria da severidade da caverna antes da resolução;
     \item \textbf{Visualização da Caverna (`mapa\_imprimir'):} Imprime a matriz no console com alinhamento tabular fixo e destaque textual para a entrada \texttt{I} e a saída \texttt{F}.
@@ -1391,7 +1391,7 @@ A implementa\c{c}\~{a}o modular em C99 cumpriu integralmente os requisitos do en
 
 Além dos requisitos obrigatórios, o grupo implementou quatro diferenciais integrados:
 \begin{itemize}
-    \item \textbf{Extra 1 --- Resumo Estatístico e Visualização da Caverna (Rafaella):} Rotinas que computam a severidade do mapa (contagem de monstros, poções, dano/cura acumulados) e imprimem a grade tabular com alinhamento e marcações de entrada e saída;
+    \item \textbf{Extra 1 --- Resumo Estatístico e Visualização da Caverna (Tomás):} Rotinas que computam a severidade do mapa (contagem de monstros, poções, dano/cura acumulados) e imprimem a grade tabular com alinhamento e marcações de entrada e saída;
     \item \textbf{Extra 2 --- Contagem de Caminhos Ótimos e Tabela DP (Tomás):} Rastreamento de multiplicidade de rotas ótimas por soma combinatória de subproblemas empatados e renderização didática da matriz de memoização de Bellman;
     \item \textbf{Extra 3 --- Visualizador ASCII e Auditoria Estatística da Rota (Otávio):} Exibição tabular passo a passo da evolução de HP, métricas de dano/cura e renderização gráfica do mapa com setas direcionais, acessível via \texttt{--verbose};
     \item \textbf{Extra 4 --- Gerador Parametrizável de Mapas (Gabriel):} Utilitário independente \texttt{gerador} que cria instâncias arbitrárias de caverna com semente reprodutível, garantindo ou impedindo solução conforme o modo especificado.
