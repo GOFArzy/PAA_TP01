@@ -1,2 +1,8 @@
-teste_mapa
 *.o
+*.exe
+tp2
+gerador
+teste_mapa
+teste_caminho
+teste_saida
+resultado.txt
